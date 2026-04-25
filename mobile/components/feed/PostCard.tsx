@@ -1,26 +1,40 @@
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../lib/theme';
-import EventEmbed from './EventEmbed';
-import CommunityEmbed from './CommunityEmbed';
+import { userGradient, formatRelativeTime } from '../../features/feed/utils';
 import PostActions from './PostActions';
-import type { FeedPost } from '../../features/feed/types';
+import type { Post } from '../../features/feed/types';
 
 interface PostCardProps {
-  post:              FeedPost;
-  isLiked:           boolean;
-  isSaved:           boolean;
-  onLike:            () => void;
-  onSave:            () => void;
-  onEventPress?:     () => void;
-  onCommunityPress?: () => void;
-  onLivePress?:      () => void;
+  post:       Post;
+  onLike:     () => void;
+  onComment?: () => void;
+  onShare?:   () => void;
 }
 
-export default function PostCard({
-  post, isLiked, isSaved,
-  onLike, onSave, onEventPress, onCommunityPress, onLivePress,
-}: PostCardProps) {
+function HashtagText({ content }: { content: string }) {
+  const parts = content.split(/(#[\wÀ-ž]+)/g);
+  return (
+    <Text style={{ fontSize: 14, color: colors.foreground, lineHeight: 20 }}>
+      {parts.map((part, i) =>
+        part.startsWith('#') ? (
+          <Text key={i} style={{ color: colors.pride.pink, fontWeight: '600' }}>
+            {part}
+          </Text>
+        ) : (
+          <Text key={i}>{part}</Text>
+        )
+      )}
+    </Text>
+  );
+}
+
+export default function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
+  const name     = post.author?.name ?? 'Usuario';
+  const handle   = `@${name.toLowerCase().replace(/[^a-z0-9]/gi, '')}`;
+  const time     = formatRelativeTime(post.created_at);
+  const gradient = userGradient(post.user_id);
+
   return (
     <View
       style={{
@@ -43,88 +57,75 @@ export default function PostCard({
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-          <LinearGradient
-            colors={post.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+          {post.author?.avatar_url ? (
+            <Image
+              source={{ uri: post.author.avatar_url }}
+              style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0 }}
+            />
+          ) : (
+            <LinearGradient
+              colors={gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                width: 40, height: 40, borderRadius: 12,
+                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>
+                {name[0].toUpperCase()}
+              </Text>
+            </LinearGradient>
+          )}
+
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.foreground }}>
+              {name}
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
+              {handle} · {time}
+            </Text>
+          </View>
+        </View>
+
+        {post.mood && (
+          <View
             style={{
-              width: 40, height: 40, borderRadius: 12,
-              alignItems: 'center', justifyContent: 'center',
+              backgroundColor: `${post.mood_color ?? colors.pride.purple}22`,
+              borderRadius: 999,
+              paddingHorizontal: 8, paddingVertical: 3,
               flexShrink: 0,
             }}
           >
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>
-              {post.user[0].toUpperCase()}
-            </Text>
-          </LinearGradient>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.foreground }}>
-              {post.user}
-            </Text>
-            <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 2 }}>
-              {post.handle} · {post.time}
-            </Text>
-          </View>
-        </View>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          {post.isLive && (
-            <TouchableOpacity
-              onPress={onLivePress}
-              style={{
-                backgroundColor: `${colors.pride.orange}30`,
-                borderRadius: 999,
-                paddingHorizontal: 8, paddingVertical: 3,
-              }}
-            >
-              <Text style={{ fontSize: 10, fontWeight: '700', color: colors.pride.orange }}>
-                LIVE
-              </Text>
-            </TouchableOpacity>
-          )}
-          <View
-            style={{
-              backgroundColor: `${post.moodColor}22`,
-              borderRadius: 999,
-              paddingHorizontal: 8, paddingVertical: 3,
-            }}
-          >
-            <Text style={{ fontSize: 10, fontWeight: '700', color: post.moodColor }}>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: post.mood_color ?? colors.pride.purple }}>
               {post.mood}
             </Text>
           </View>
-        </View>
+        )}
       </View>
 
-      {/* Content */}
-      <Text
-        style={{
-          fontSize: 14,
-          color: colors.foreground,
-          lineHeight: 20,
-          paddingHorizontal: 16,
-          paddingBottom: 12,
-        }}
-      >
-        {post.content}
-      </Text>
+      {/* Contenido */}
+      <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+        <HashtagText content={post.content} />
+      </View>
 
-      {/* Embeds */}
-      {post.eventCard && (
-        <EventEmbed event={post.eventCard} onPress={onEventPress} />
-      )}
-      {post.communityCard && (
-        <CommunityEmbed community={post.communityCard} onPress={onCommunityPress} />
+      {/* Imagen */}
+      {post.image_url && (
+        <Image
+          source={{ uri: post.image_url }}
+          style={{ width: '100%', height: 200 }}
+          resizeMode="cover"
+        />
       )}
 
-      {/* Actions */}
+      {/* Acciones */}
       <PostActions
-        likes={post.likes}
-        comments={post.comments}
-        isLiked={isLiked}
-        isSaved={isSaved}
+        likes={post.likes_count}
+        comments={post.comments_count}
+        isLiked={post.is_liked_by_me}
         onLike={onLike}
-        onSave={onSave}
+        onComment={onComment}
+        onShare={onShare}
       />
     </View>
   );

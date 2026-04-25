@@ -92,3 +92,176 @@ create policy "Users can upload their own avatar"
 create policy "Users can update their own avatar"
   on storage.objects for update
   using (bucket_id = 'avatars' and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- ============================================================
+-- POSTS
+-- ============================================================
+
+-- -----------------------------------------------
+-- POSTS
+-- -----------------------------------------------
+create table public.posts (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references public.profiles(id) on delete cascade,
+  content        text not null,
+  image_url      text,
+  mood           text,
+  mood_color     text,
+  likes_count    int not null default 0,
+  comments_count int not null default 0,
+  created_at     timestamptz default now() not null,
+  updated_at     timestamptz default now() not null
+);
+
+create index posts_user_id_idx    on public.posts (user_id);
+create index posts_created_at_idx on public.posts (created_at desc);
+
+create trigger posts_updated_at
+  before update on public.posts
+  for each row execute procedure public.set_updated_at();
+
+-- -----------------------------------------------
+-- HASHTAGS
+-- -----------------------------------------------
+create table public.hashtags (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null unique,
+  posts_count int not null default 0,
+  created_at  timestamptz default now() not null
+);
+
+create index hashtags_name_idx        on public.hashtags (name);
+create index hashtags_posts_count_idx on public.hashtags (posts_count desc);
+
+-- -----------------------------------------------
+-- POST_HASHTAGS (junction)
+-- -----------------------------------------------
+create table public.post_hashtags (
+  post_id    uuid not null references public.posts(id)    on delete cascade,
+  hashtag_id uuid not null references public.hashtags(id) on delete cascade,
+  primary key (post_id, hashtag_id)
+);
+
+-- -----------------------------------------------
+-- POST_LIKES
+-- -----------------------------------------------
+create table public.post_likes (
+  post_id    uuid not null references public.posts(id) on delete cascade,
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz default now() not null,
+  primary key (post_id, user_id)
+);
+
+create index post_likes_user_id_idx on public.post_likes (user_id);
+
+-- -----------------------------------------------
+-- POST_COMMENTS
+-- -----------------------------------------------
+create table public.post_comments (
+  id         uuid primary key default gen_random_uuid(),
+  post_id    uuid not null references public.posts(id)    on delete cascade,
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  content    text not null,
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null
+);
+
+create index post_comments_post_id_idx on public.post_comments (post_id);
+
+create trigger post_comments_updated_at
+  before update on public.post_comments
+  for each row execute procedure public.set_updated_at();
+
+-- -----------------------------------------------
+-- TRIGGERS: mantener contadores automáticamente
+-- -----------------------------------------------
+create or replace function public.update_post_likes_count()
+returns trigger language plpgsql security definer as $$
+begin
+  if TG_OP = 'INSERT' then
+    update public.posts set likes_count = likes_count + 1 where id = NEW.post_id;
+  elsif TG_OP = 'DELETE' then
+    update public.posts set likes_count = greatest(likes_count - 1, 0) where id = OLD.post_id;
+  end if;
+  return null;
+end;
+$$;
+
+create trigger post_likes_count_trigger
+  after insert or delete on public.post_likes
+  for each row execute function public.update_post_likes_count();
+
+create or replace function public.update_post_comments_count()
+returns trigger language plpgsql security definer as $$
+begin
+  if TG_OP = 'INSERT' then
+    update public.posts set comments_count = comments_count + 1 where id = NEW.post_id;
+  elsif TG_OP = 'DELETE' then
+    update public.posts set comments_count = greatest(comments_count - 1, 0) where id = OLD.post_id;
+  end if;
+  return null;
+end;
+$$;
+
+create trigger post_comments_count_trigger
+  after insert or delete on public.post_comments
+  for each row execute function public.update_post_comments_count();
+
+create or replace function public.update_hashtag_posts_count()
+returns trigger language plpgsql security definer as $$
+begin
+  if TG_OP = 'INSERT' then
+    update public.hashtags set posts_count = posts_count + 1 where id = NEW.hashtag_id;
+  elsif TG_OP = 'DELETE' then
+    update public.hashtags set posts_count = greatest(posts_count - 1, 0) where id = OLD.hashtag_id;
+  end if;
+  return null;
+end;
+$$;
+
+create trigger post_hashtags_count_trigger
+  after insert or delete on public.post_hashtags
+  for each row execute function public.update_hashtag_posts_count();
+
+-- -----------------------------------------------
+-- ROW LEVEL SECURITY — posts
+-- -----------------------------------------------
+alter table public.posts         enable row level security;
+alter table public.hashtags      enable row level security;
+alter table public.post_hashtags enable row level security;
+alter table public.post_likes    enable row level security;
+alter table public.post_comments enable row level security;
+
+create policy "Anyone can read posts"           on public.posts for select using (true);
+create policy "Users can create posts"          on public.posts for insert with check (auth.uid() = user_id);
+create policy "Users can delete own posts"      on public.posts for delete using (auth.uid() = user_id);
+
+create policy "Anyone can read hashtags"        on public.hashtags      for select using (true);
+create policy "Anyone can read post_hashtags"   on public.post_hashtags for select using (true);
+
+create policy "Anyone can read likes"           on public.post_likes for select using (true);
+create policy "Users can like posts"            on public.post_likes for insert with check (auth.uid() = user_id);
+create policy "Users can unlike posts"          on public.post_likes for delete using (auth.uid() = user_id);
+
+create policy "Anyone can read comments"        on public.post_comments for select using (true);
+create policy "Users can comment"               on public.post_comments for insert with check (auth.uid() = user_id);
+create policy "Users can delete own comments"   on public.post_comments for delete using (auth.uid() = user_id);
+
+-- -----------------------------------------------
+-- STORAGE: imágenes de posts
+-- -----------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('posts', 'posts', true)
+on conflict do nothing;
+
+create policy "Anyone can read post images"
+  on storage.objects for select
+  using (bucket_id = 'posts');
+
+create policy "Users can upload post images"
+  on storage.objects for insert
+  with check (bucket_id = 'posts' and auth.uid()::text = (storage.foldername(name))[1]);
+
+create policy "Users can delete own post images"
+  on storage.objects for delete
+  using (bucket_id = 'posts' and auth.uid()::text = (storage.foldername(name))[1]);

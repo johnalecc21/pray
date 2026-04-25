@@ -6,16 +6,14 @@ interface PostActionsProps {
   likes:      number;
   comments:   number;
   isLiked:    boolean;
-  isSaved:    boolean;
   onLike:     () => void;
-  onSave:     () => void;
   onComment?: () => void;
   onShare?:   () => void;
 }
 
 export default function PostActions({
-  likes, comments, isLiked, isSaved,
-  onLike, onSave, onComment, onShare,
+  likes, comments, isLiked,
+  onLike, onComment, onShare,
 }: PostActionsProps) {
   return (
     <View
@@ -41,7 +39,7 @@ export default function PostActions({
             color={isLiked ? colors.pride.pink : colors.mutedForeground}
           />
           <Text style={{ fontSize: 12, color: isLiked ? colors.pride.pink : colors.mutedForeground }}>
-            {likes + (isLiked ? 1 : 0)}
+            {likes}
           </Text>
         </TouchableOpacity>
 
@@ -58,14 +56,6 @@ export default function PostActions({
           <Ionicons name="share-outline" size={16} color={colors.mutedForeground} />
         </TouchableOpacity>
       </View>
-
-      <TouchableOpacity onPress={onSave} hitSlop={8}>
-        <Ionicons
-          name={isSaved ? 'bookmark' : 'bookmark-outline'}
-          size={16}
-          color={isSaved ? colors.pride.yellow : colors.mutedForeground}
-        />
-      </TouchableOpacity>
     </View>
   );
 }
