@@ -8,11 +8,13 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import SocialButtons from '../../components/auth/SocialButtons';
+import { prideGradientShort } from '../../lib/theme';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -53,13 +55,21 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View className="mb-10">
-          <Text className="text-4xl font-bold text-foreground tracking-tight">
+        {/* Logo / Header */}
+        <View className="mb-10 items-center">
+          <View className="w-16 h-16 rounded-2xl overflow-hidden mb-5">
+            <LinearGradient
+              colors={prideGradientShort as unknown as string[]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ flex: 1 }}
+            />
+          </View>
+          <Text className="text-3xl font-bold text-foreground tracking-tight">
             Welcome back
           </Text>
-          <Text className="mt-2 text-base text-muted-foreground">
-            Sign in to your account to continue
+          <Text className="mt-2 text-base text-muted-foreground text-center">
+            Sign in to your account
           </Text>
         </View>
 
@@ -89,7 +99,7 @@ export default function LoginScreen() {
             <Text className="text-sm text-muted-foreground">Forgot password?</Text>
           </TouchableOpacity>
 
-          <Button loading={loading} onPress={handleLogin}>
+          <Button variant="primary" loading={loading} onPress={handleLogin}>
             Sign In
           </Button>
         </View>
@@ -97,7 +107,7 @@ export default function LoginScreen() {
         {/* Divider */}
         <View className="flex-row items-center my-6 gap-3">
           <View className="flex-1 h-px bg-border" />
-          <Text className="text-sm text-muted-foreground">or continue with</Text>
+          <Text className="text-xs text-muted-foreground uppercase tracking-widest">or</Text>
           <View className="flex-1 h-px bg-border" />
         </View>
 
@@ -108,7 +118,7 @@ export default function LoginScreen() {
         <View className="flex-row justify-center mt-8 gap-1">
           <Text className="text-sm text-muted-foreground">Don't have an account?</Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-            <Text className="text-sm font-semibold text-foreground">Register</Text>
+            <Text className="text-sm font-semibold text-primary">Register</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

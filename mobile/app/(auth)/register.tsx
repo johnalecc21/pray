@@ -8,11 +8,13 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import SocialButtons from '../../components/auth/SocialButtons';
+import { prideGradientShort } from '../../lib/theme';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
@@ -58,17 +60,25 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View className="mb-10">
-          <Text className="text-4xl font-bold text-foreground tracking-tight">
+        <View className="mb-10 items-center">
+          <View className="w-16 h-16 rounded-2xl overflow-hidden mb-5">
+            <LinearGradient
+              colors={prideGradientShort as unknown as string[]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ flex: 1 }}
+            />
+          </View>
+          <Text className="text-3xl font-bold text-foreground tracking-tight">
             Create account
           </Text>
-          <Text className="mt-2 text-base text-muted-foreground">
-            Sign up to get started
+          <Text className="mt-2 text-base text-muted-foreground text-center">
+            Join us today
           </Text>
         </View>
 
         {/* Form */}
-        <View className="mb-2">
+        <View>
           <Input
             label="Full name"
             placeholder="John Doe"
@@ -106,7 +116,7 @@ export default function RegisterScreen() {
             error={errors.confirm}
           />
 
-          <Button loading={loading} onPress={handleRegister} className="mt-2">
+          <Button variant="primary" loading={loading} onPress={handleRegister} className="mt-2">
             Create Account
           </Button>
         </View>
@@ -114,7 +124,7 @@ export default function RegisterScreen() {
         {/* Divider */}
         <View className="flex-row items-center my-6 gap-3">
           <View className="flex-1 h-px bg-border" />
-          <Text className="text-sm text-muted-foreground">or continue with</Text>
+          <Text className="text-xs text-muted-foreground uppercase tracking-widest">or</Text>
           <View className="flex-1 h-px bg-border" />
         </View>
 
@@ -125,7 +135,7 @@ export default function RegisterScreen() {
         <View className="flex-row justify-center mt-8 gap-1">
           <Text className="text-sm text-muted-foreground">Already have an account?</Text>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text className="text-sm font-semibold text-foreground">Sign In</Text>
+            <Text className="text-sm font-semibold text-primary">Sign In</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
