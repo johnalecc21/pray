@@ -9,7 +9,9 @@ router.use(requireAuth);
 // POST /users/onboarding
 router.post('/onboarding', async (req: AuthRequest, res) => {
   const { identity, pronouns, interests, moods, avatar_url } = req.body;
+  const userId = req.userId!;
 
+  // 1. Update Supabase Auth user_metadata
   const metadata: Record<string, unknown> = {
     identity,
     pronouns,
@@ -17,16 +19,31 @@ router.post('/onboarding', async (req: AuthRequest, res) => {
     moods,
     onboarding_complete: true,
   };
-
   if (avatar_url) metadata.avatar_url = avatar_url;
 
-  const { error } = await supabase.auth.admin.updateUserById(req.userId!, {
+  const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
     user_metadata: metadata,
   });
 
-  if (error) {
-    res.status(500).json({ error: error.message });
+  if (authError) {
+    res.status(500).json({ error: authError.message });
     return;
+  }
+
+  // 2. Update profiles table (upsert por si el trigger no lo creó aún)
+  const profileUpdate: Record<string, unknown> = {
+    id: userId,
+    updated_at: new Date().toISOString(),
+  };
+  if (avatar_url) profileUpdate.avatar_url = avatar_url;
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .upsert(profileUpdate, { onConflict: 'id' });
+
+  if (profileError) {
+    // No es fatal — los datos están en user_metadata igualmente
+    console.error('Profile upsert error:', profileError.message);
   }
 
   res.json({ ok: true });
@@ -42,9 +59,9 @@ router.get('/me', async (req: AuthRequest, res) => {
   }
 
   res.json({
-    id: data.user.id,
-    email: data.user.email,
-    name: data.user.user_metadata?.name ?? null,
+    id:         data.user.id,
+    email:      data.user.email,
+    name:       data.user.user_metadata?.name      ?? null,
     avatar_url: data.user.user_metadata?.avatar_url ?? null,
     created_at: data.user.created_at,
   });

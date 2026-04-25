@@ -62,8 +62,8 @@ export function useOnboarding() {
             setState((prev) => ({ ...prev, avatarUrl }));
           }
         } catch (uploadErr) {
-          console.warn('Avatar upload failed:', uploadErr);
-          // Continúa sin foto — el usuario puede actualizarla después
+          // Re-lanzar para que la pantalla muestre el error real
+          throw uploadErr;
         }
       }
 
