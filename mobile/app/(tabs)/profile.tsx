@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../features/profile/hooks/useProfile';
 import EditProfileModal from '../../components/profile/EditProfileModal';
 import PhotoViewer     from '../../components/profile/PhotoViewer';
+import GradientText    from '../../components/ui/GradientText';
 import { colors, prideGradient } from '../../lib/theme';
 import { identityOptions, interestOptions, moodOptions } from '../../features/onboarding/data';
 
@@ -117,9 +118,7 @@ export default function ProfileScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
-        <Text className="text-xl font-extrabold " style={{ color: colors.primary }}>
-          Mi Perfil
-        </Text>
+        <GradientText fontSize={20} fontWeight="800">Mi Perfil</GradientText>
         <View className="flex-row gap-3">
           <TouchableOpacity
             onPress={() => setEditing(true)}
