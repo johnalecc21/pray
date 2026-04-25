@@ -52,22 +52,15 @@ export function useOnboarding() {
     try {
       let avatarUrl = state.avatarUrl;
 
-      // Upload avatar — error no bloquea el onboarding
       if (state.avatarUri && !avatarUrl) {
-        try {
-          const { data: sessionData } = await supabase.auth.getSession();
-          const userId = sessionData.session?.user.id;
-          if (userId) {
-            avatarUrl = await uploadAvatar(userId, state.avatarUri);
-            setState((prev) => ({ ...prev, avatarUrl }));
-          }
-        } catch (uploadErr) {
-          // Re-lanzar para que la pantalla muestre el error real
-          throw uploadErr;
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData.session?.user.id;
+        if (userId) {
+          avatarUrl = await uploadAvatar(userId, state.avatarUri);
+          setState((prev) => ({ ...prev, avatarUrl }));
         }
       }
 
-      // Persist to backend (best-effort)
       await api.post('/users/onboarding', {
         identity:   state.identity,
         pronouns:   state.pronouns,

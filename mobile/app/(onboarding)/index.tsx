@@ -1,4 +1,4 @@
-import { View, TouchableOpacity, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity, Text, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -21,8 +21,15 @@ export default function OnboardingScreen() {
 
   async function handleNext() {
     if (isLast) {
-      await complete();
-      router.replace('/(tabs)');
+      try {
+        await complete();
+        router.replace('/(tabs)');
+      } catch (err: unknown) {
+        Alert.alert(
+          'Error al guardar',
+          err instanceof Error ? err.message : 'Algo salió mal. Intenta de nuevo.',
+        );
+      }
     } else {
       next();
     }
