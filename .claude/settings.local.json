@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npm --version)",
       "Bash(npx create-expo-app@latest *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(npx tsx *)",
+      "Bash(curl -s http://localhost:3000/health)",
+      "Bash(ipconfig)"
     ]
   }
 }

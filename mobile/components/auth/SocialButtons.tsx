@@ -16,7 +16,10 @@ export default function SocialButtons() {
         await signInWithProvider(provider);
       }
       router.replace('/(tabs)');
-    } catch (e) {
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '';
+      // User closed the browser — not an error
+      if (msg.includes('cancelled') || msg.includes('cancel') || msg.includes('dismissed')) return;
       console.error(e);
     } finally {
       setLoading(null);

@@ -8,23 +8,19 @@ router.use(requireAuth);
 
 // GET /users/me
 router.get('/me', async (req: AuthRequest, res) => {
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('id, name, avatar_url, created_at')
-    .eq('id', req.userId!)
-    .single();
+  const { data, error } = await supabase.auth.admin.getUserById(req.userId!);
 
-  if (error || !profile) {
+  if (error || !data.user) {
     res.status(404).json({ error: 'User not found' });
     return;
   }
 
-  // Get email from auth
-  const { data: authUser } = await supabase.auth.admin.getUserById(req.userId!);
-
   res.json({
-    ...profile,
-    email: authUser.user?.email,
+    id: data.user.id,
+    email: data.user.email,
+    name: data.user.user_metadata?.name ?? null,
+    avatar_url: data.user.user_metadata?.avatar_url ?? null,
+    created_at: data.user.created_at,
   });
 });
 
