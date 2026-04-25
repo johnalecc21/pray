@@ -14,8 +14,8 @@ const Input = forwardRef<TextInput, InputProps>(({ label, error, className, ...p
       )}
       <TextInput
         ref={ref}
-        className={`h-12 rounded-lg border border-input bg-background px-4 text-base text-foreground placeholder:text-muted-foreground ${error ? 'border-destructive' : ''} ${className ?? ''}`}
-        placeholderTextColor="#737373"
+        className={`h-12 rounded-lg border border-border bg-input px-4 text-base text-foreground ${error ? 'border-destructive' : ''} ${className ?? ''}`}
+        placeholderTextColor="#8886a4"
         {...props}
       />
       {error && (

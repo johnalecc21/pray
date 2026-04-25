@@ -2,49 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Conversión oklch → hex del diseño Pride/Rainbow.
+  tw-animate-css y background-clip:text no existen en React Native —
+  usar expo-linear-gradient y react-native-reanimated para esos efectos.
+*/
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
-    --primary: 0 0% 13%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 97%;
-    --secondary-foreground: 0 0% 13%;
-    --muted: 0 0% 97%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 97%;
-    --accent-foreground: 0 0% 13%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 84% 60%;
-    --border: 0 0% 92%;
-    --input: 0 0% 92%;
-    --ring: 0 0% 71%;
-    --radius: 0.625rem;
-  }
+    /* oklch(0.08 0.01 280) */
+    --background: #010203;
+    /* oklch(0.97 0 0) */
+    --foreground: #f7f7f7;
+    /* oklch(0.12 0.015 280) */
+    --card: #141220;
+    /* oklch(0.97 0 0) */
+    --card-foreground: #f7f7f7;
+    /* oklch(0.12 0.015 280) */
+    --popover: #141220;
+    /* oklch(0.97 0 0) */
+    --popover-foreground: #f7f7f7;
+    /* oklch(0.65 0.28 330) — hot pink */
+    --primary: #e423dd;
+    /* oklch(0.97 0 0) */
+    --primary-foreground: #f7f7f7;
+    /* oklch(0.18 0.02 280) */
+    --secondary: #1e1b2e;
+    /* oklch(0.97 0 0) */
+    --secondary-foreground: #f7f7f7;
+    /* oklch(0.18 0.02 280) */
+    --muted: #1e1b2e;
+    /* oklch(0.6 0.02 280) */
+    --muted-foreground: #8886a4;
+    /* oklch(0.65 0.25 270) — purple */
+    --accent: #9333ea;
+    /* oklch(0.97 0 0) */
+    --accent-foreground: #f7f7f7;
+    /* oklch(0.577 0.245 27.325) */
+    --destructive: #dc2626;
+    /* oklch(0.97 0 0) */
+    --destructive-foreground: #f7f7f7;
+    /* oklch(0.22 0.02 280) */
+    --border: #26243a;
+    /* oklch(0.18 0.02 280) */
+    --input: #1e1b2e;
+    /* oklch(0.65 0.28 330) */
+    --ring: #d946a8;
+    --radius: 16px;
 
-  .dark {
-    --background: 0 0% 9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 13%;
-    --secondary: 0 0% 25%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 25%;
-    --muted-foreground: 0 0% 71%;
-    --accent: 0 0% 25%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 0 72% 51%;
-    --border: 0 0% 25%;
-    --input: 0 0% 25%;
-    --ring: 0 0% 44%;
+    /* Pride colors — oklch → hex */
+    /* oklch(0.65 0.25 25) */
+    --pride-red: #f43f5e;
+    /* oklch(0.72 0.22 55) */
+    --pride-orange: #f97316;
+    /* oklch(0.88 0.2 100) */
+    --pride-yellow: #bef264;
+    /* oklch(0.68 0.22 145) */
+    --pride-green: #4ade80;
+    /* oklch(0.58 0.23 240) */
+    --pride-blue: #60a5fa;
+    /* oklch(0.55 0.26 295) */
+    --pride-purple: #a855f7;
+    /* oklch(0.65 0.28 330) */
+    --pride-pink: #d946a8;
+
+    /* oklch(0.1 0.015 280) */
+    --sidebar: #100e1a;
+    /* oklch(0.97 0 0) */
+    --sidebar-foreground: #f7f7f7;
+    /* oklch(0.65 0.28 330) */
+    --sidebar-primary: #d946a8;
+    /* oklch(0.97 0 0) */
+    --sidebar-primary-foreground: #f7f7f7;
+    /* oklch(0.18 0.02 280) */
+    --sidebar-accent: #1e1b2e;
+    /* oklch(0.97 0 0) */
+    --sidebar-accent-foreground: #f7f7f7;
+    /* oklch(0.22 0.02 280) */
+    --sidebar-border: #26243a;
+    /* oklch(0.65 0.28 330) */
+    --sidebar-ring: #d946a8;
   }
 }

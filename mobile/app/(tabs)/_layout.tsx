@@ -1,27 +1,17 @@
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import BottomTabBar from '../../components/navigation/BottomTabBar';
 
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: '#007AFF' }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
-          ),
-        }}
-      />
+    <Tabs
+      tabBar={(props) => <BottomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tabs.Screen name="index"   options={{ title: 'Feed' }} />
+      <Tabs.Screen name="map"     options={{ title: 'Mapa' }} />
+      <Tabs.Screen name="match"   options={{ title: 'Match' }} />
+      <Tabs.Screen name="chat"    options={{ title: 'Chat' }} />
+      <Tabs.Screen name="profile" options={{ title: 'Yo' }} />
     </Tabs>
   );
 }
