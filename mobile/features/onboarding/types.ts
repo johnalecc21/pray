@@ -20,8 +20,9 @@ export interface InterestOption {
 
 export interface MoodOption {
   label: string;
-  desc: string;
+  desc:  string;
   color: string;
+  icon?: string; // Ionicons name
 }
 
 export const TOTAL_STEPS = 5;

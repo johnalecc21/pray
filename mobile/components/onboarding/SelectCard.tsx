@@ -43,10 +43,18 @@ export default function SelectCard({
           className="w-12 h-12 rounded-2xl items-center justify-center"
           style={{ backgroundColor: selected ? withAlpha(color, '33') : colors.secondary }}
         >
-          <View
-            className="w-4 h-4 rounded-full"
-            style={{ backgroundColor: selected ? color : '#3d3a55' }}
-          />
+          {icon ? (
+            <Ionicons
+              name={icon as any}
+              size={22}
+              color={selected ? color : colors.mutedForeground}
+            />
+          ) : (
+            <View
+              className="w-4 h-4 rounded-full"
+              style={{ backgroundColor: selected ? color : '#3d3a55' }}
+            />
+          )}
         </View>
 
         {/* Text */}

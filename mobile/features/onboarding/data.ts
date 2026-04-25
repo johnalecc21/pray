@@ -31,10 +31,11 @@ export const interestOptions: InterestOption[] = [
 ];
 
 export const moodOptions: MoodOption[] = [
-  { label: 'Dating',      desc: 'Busco algo especial',         color: colors.pride.pink   },
-  { label: 'Amistad',     desc: 'Quiero conocer gente',        color: colors.pride.blue   },
-  { label: 'Fiesta',      desc: 'A salir y disfrutar',         color: colors.pride.orange },
-  { label: 'Networking',  desc: 'Crecer profesionalmente',     color: colors.pride.green  },
+  { label: 'Hot',         desc: 'Estoy en modo fuego 🔥',      color: colors.pride.orange, icon: 'flame'        },
+  { label: 'Dating',      desc: 'Busco algo especial',         color: colors.pride.pink                        },
+  { label: 'Amistad',     desc: 'Quiero conocer gente',        color: colors.pride.blue                        },
+  { label: 'Fiesta',      desc: 'A salir y disfrutar',         color: colors.pride.orange                      },
+  { label: 'Networking',  desc: 'Crecer profesionalmente',     color: colors.pride.green                       },
 ];
 
 export const welcomeFeatures = [

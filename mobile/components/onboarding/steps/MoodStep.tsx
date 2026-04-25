@@ -24,6 +24,7 @@ export default function MoodStep({ selected, onToggle }: MoodStepProps) {
             selected={selected.includes(m.label)}
             onPress={() => onToggle(m.label)}
             color={m.color}
+            icon={m.icon}
             variant="list"
           />
         ))}

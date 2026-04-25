@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../features/profile/hooks/useProfile';
 import EditProfileModal from '../../components/profile/EditProfileModal';
+import PhotoViewer     from '../../components/profile/PhotoViewer';
 import { colors, prideGradient } from '../../lib/theme';
 import { identityOptions, interestOptions, moodOptions } from '../../features/onboarding/data';
 
@@ -51,9 +52,11 @@ export default function ProfileScreen() {
   const { logout }                                           = useAuth();
   const { profile, loading, saving, update,
           changeAvatar, changeCover, addPhoto, removePhoto } = useProfile();
-  const [editing, setEditing]                               = useState(false);
+  const [editing,      setEditing]      = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
 
-  const moodColorMap     = Object.fromEntries(moodOptions.map((m) => [m.label, m.color]));
+  const moodColorMap = Object.fromEntries(moodOptions.map((m) => [m.label, m.color]));
+  const moodIconMap  = Object.fromEntries(moodOptions.filter((m) => m.icon).map((m) => [m.label, m.icon!]));
   const interestIconMap  = Object.fromEntries(
     interestOptions.map((i) => [i.label, i.icon as React.ComponentProps<typeof Ionicons>['name']]),
   );
@@ -229,7 +232,10 @@ export default function ProfileScreen() {
             </Text>
             <View className="flex-row flex-wrap gap-2">
               {profile.moods.map((mood) => (
-                <View key={mood} className="px-3 py-1.5 rounded-full" style={{ backgroundColor: moodColorMap[mood] ?? colors.primary }}>
+                <View key={mood} className="flex-row items-center gap-1 px-3 py-1.5 rounded-full" style={{ backgroundColor: moodColorMap[mood] ?? colors.primary }}>
+                  {moodIconMap[mood] && (
+                    <Ionicons name={moodIconMap[mood] as any} size={12} color="#fff" />
+                  )}
                   <Text className="text-xs font-bold text-white">{mood}</Text>
                 </View>
               ))}
@@ -272,6 +278,7 @@ export default function ProfileScreen() {
             {profile.photos.map((url) => (
               <TouchableOpacity
                 key={url}
+                onPress={() => setViewingPhoto(url)}
                 onLongPress={() => handleRemovePhoto(url)}
                 activeOpacity={0.85}
                 style={{ width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: 14, overflow: 'hidden' }}
@@ -300,6 +307,11 @@ export default function ProfileScreen() {
           onClose={() => setEditing(false)}
         />
       )}
+
+      <PhotoViewer
+        uri={viewingPhoto}
+        onClose={() => setViewingPhoto(null)}
+      />
     </SafeAreaView>
   );
 }
