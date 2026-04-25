@@ -1,18 +1,23 @@
 import { useState, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import { supabase } from '../../../lib/supabase';
+import { uploadAvatar } from '../../../lib/storage';
+import { api } from '../../../lib/api';
 import type { OnboardingState } from '../types';
 import { TOTAL_STEPS } from '../types';
-import { api } from '../../../lib/api';
 
 const ONBOARDING_KEY = 'onboarding_complete';
 
 export function useOnboarding() {
   const [step, setStep] = useState(0);
+  const [uploading, setUploading] = useState(false);
   const [state, setState] = useState<OnboardingState>({
     identity:  ['Gay'],
     pronouns:  'él/him',
     interests: ['Gym', 'Música'],
     moods:     ['Dating'],
+    avatarUri: null,
+    avatarUrl: null,
   });
 
   const toggleMulti = useCallback(
@@ -20,8 +25,8 @@ export function useOnboarding() {
       setState((prev) => ({
         ...prev,
         [key]: prev[key].includes(value)
-          ? prev[key].filter((x) => x !== value)
-          : [...prev[key], value],
+          ? (prev[key] as string[]).filter((x) => x !== value)
+          : [...(prev[key] as string[]), value],
       }));
     },
     [],
@@ -34,28 +39,53 @@ export function useOnboarding() {
     [],
   );
 
-  const next = useCallback(() => {
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
+  const setAvatarUri = useCallback((uri: string) => {
+    setState((prev) => ({ ...prev, avatarUri: uri, avatarUrl: null }));
   }, []);
 
-  const back = useCallback(() => {
-    setStep((s) => Math.max(s - 1, 0));
-  }, []);
-
+  const next = useCallback(() => setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1)), []);
+  const back = useCallback(() => setStep((s) => Math.max(s - 1, 0)), []);
   const isLast = step === TOTAL_STEPS - 1;
 
   async function complete() {
+    setUploading(true);
     try {
-      await api.post('/users/onboarding', state).catch(() => null); // best-effort
-    } finally {
+      let avatarUrl = state.avatarUrl;
+
+      // Upload avatar — error no bloquea el onboarding
+      if (state.avatarUri && !avatarUrl) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const userId = sessionData.session?.user.id;
+          if (userId) {
+            avatarUrl = await uploadAvatar(userId, state.avatarUri);
+            setState((prev) => ({ ...prev, avatarUrl }));
+          }
+        } catch (uploadErr) {
+          console.warn('Avatar upload failed:', uploadErr);
+          // Continúa sin foto — el usuario puede actualizarla después
+        }
+      }
+
+      // Persist to backend (best-effort)
+      await api.post('/users/onboarding', {
+        identity:   state.identity,
+        pronouns:   state.pronouns,
+        interests:  state.interests,
+        moods:      state.moods,
+        avatar_url: avatarUrl,
+      }).catch(() => null);
+
       await SecureStore.setItemAsync(ONBOARDING_KEY, 'true');
+    } finally {
+      setUploading(false);
     }
   }
 
-  return { step, state, toggleMulti, setSingle, next, back, isLast, complete };
+  return { step, state, uploading, toggleMulti, setSingle, setAvatarUri, next, back, isLast, complete };
 }
 
-export async function hasCompletedOnboarding() {
+export async function hasCompletedOnboarding(): Promise<boolean> {
   const val = await SecureStore.getItemAsync(ONBOARDING_KEY);
   return val === 'true';
 }

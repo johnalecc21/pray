@@ -1,8 +1,10 @@
 export interface OnboardingState {
-  identity: string[];
-  pronouns: string;
+  identity:  string[];
+  pronouns:  string;
   interests: string[];
-  moods: string[];
+  moods:     string[];
+  avatarUri: string | null;   // local URI before upload
+  avatarUrl: string | null;   // remote URL after upload
 }
 
 export interface IdentityOption {

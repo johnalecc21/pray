@@ -1,21 +1,25 @@
-import { View, Text, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text } from 'react-native';
+import AvatarPicker from '../AvatarPicker';
 import SelectChip from '../SelectChip';
 import { colors } from '../../../lib/theme';
 import { identityOptions, pronounOptions } from '../../../features/onboarding/data';
 
 interface IdentityStepProps {
   selectedIdentity: string[];
-  selectedPronouns: string;
-  onToggleIdentity: (val: string) => void;
-  onSelectPronouns: (val: string) => void;
+  selectedPronouns:  string;
+  avatarUri:         string | null;
+  onToggleIdentity:  (val: string) => void;
+  onSelectPronouns:  (val: string) => void;
+  onAvatarChange:    (uri: string) => void;
 }
 
 export default function IdentityStep({
   selectedIdentity,
   selectedPronouns,
+  avatarUri,
   onToggleIdentity,
   onSelectPronouns,
+  onAvatarChange,
 }: IdentityStepProps) {
   return (
     <View>
@@ -24,22 +28,8 @@ export default function IdentityStep({
         Puedes seleccionar varias. Solo tu comunidad las verá.
       </Text>
 
-      {/* Photo upload */}
-      <View className="items-center mb-5">
-        <TouchableOpacity
-          className="w-24 h-24 rounded-2xl items-center justify-center gap-1"
-          style={{
-            borderWidth: 2,
-            borderStyle: 'dashed',
-            borderColor: colors.border,
-            backgroundColor: colors.secondary,
-          }}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="camera-outline" size={22} color={colors.mutedForeground} />
-          <Text className="text-[10px] text-muted-foreground">Subir foto</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Photo picker */}
+      <AvatarPicker uri={avatarUri} onChange={onAvatarChange} />
 
       {/* Identity chips */}
       <Text className="text-xs text-muted-foreground font-semibold uppercase tracking-widest mb-2">

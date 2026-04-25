@@ -8,10 +8,20 @@ router.use(requireAuth);
 
 // POST /users/onboarding
 router.post('/onboarding', async (req: AuthRequest, res) => {
-  const { identity, pronouns, interests, moods } = req.body;
+  const { identity, pronouns, interests, moods, avatar_url } = req.body;
+
+  const metadata: Record<string, unknown> = {
+    identity,
+    pronouns,
+    interests,
+    moods,
+    onboarding_complete: true,
+  };
+
+  if (avatar_url) metadata.avatar_url = avatar_url;
 
   const { error } = await supabase.auth.admin.updateUserById(req.userId!, {
-    user_metadata: { identity, pronouns, interests, moods, onboarding_complete: true },
+    user_metadata: metadata,
   });
 
   if (error) {
