@@ -67,7 +67,7 @@ export function useOnboarding() {
         interests:  state.interests,
         moods:      state.moods,
         avatar_url: avatarUrl,
-      }).catch(() => null);
+      });
 
       await SecureStore.setItemAsync(ONBOARDING_KEY, 'true');
     } finally {

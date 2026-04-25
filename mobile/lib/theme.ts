@@ -1,11 +1,11 @@
 export const colors = {
-  background: '#0d0b14',
+  background: '#010103',
   foreground: '#f7f7f7',
   card: '#141220',
   cardForeground: '#f7f7f7',
   popover: '#141220',
   popoverForeground: '#f7f7f7',
-  primary: '#d946a8',
+  primary: '#e423dd',
   primaryForeground: '#f7f7f7',
   secondary: '#1e1b2e',
   secondaryForeground: '#f7f7f7',
