@@ -62,19 +62,23 @@ router.get('/me', async (req: AuthRequest, res) => {
   res.json({
     id:         data.user.id,
     email:      data.user.email,
-    name:       meta.name       ?? null,
-    avatar_url: meta.avatar_url ?? null,
-    identity:   meta.identity   ?? [],
-    pronouns:   meta.pronouns   ?? null,
-    interests:  meta.interests  ?? [],
-    moods:      meta.moods      ?? [],
+    name:       meta.name        ?? null,
+    avatar_url: meta.avatar_url  ?? null,
+    cover_url:  meta.cover_url   ?? null,
+    bio:        meta.bio         ?? null,
+    location:   meta.location    ?? null,
+    identity:   meta.identity    ?? [],
+    pronouns:   meta.pronouns    ?? null,
+    interests:  meta.interests   ?? [],
+    moods:      meta.moods       ?? [],
+    photos:     meta.photos      ?? [],
     created_at: data.user.created_at,
   });
 });
 
 // PUT /users/profile
 router.put('/profile', async (req: AuthRequest, res) => {
-  const { name, identity, pronouns, interests, moods, avatar_url } = req.body;
+  const { name, identity, pronouns, interests, moods, avatar_url, cover_url, bio, location, photos } = req.body;
   const userId = req.userId!;
 
   const metadata: Record<string, unknown> = {};
@@ -84,6 +88,10 @@ router.put('/profile', async (req: AuthRequest, res) => {
   if (interests  !== undefined) metadata.interests  = interests;
   if (moods      !== undefined) metadata.moods      = moods;
   if (avatar_url !== undefined) metadata.avatar_url = avatar_url;
+  if (cover_url  !== undefined) metadata.cover_url  = cover_url;
+  if (bio        !== undefined) metadata.bio        = bio;
+  if (location   !== undefined) metadata.location   = location;
+  if (photos     !== undefined) metadata.photos     = photos;
 
   const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
     user_metadata: metadata,

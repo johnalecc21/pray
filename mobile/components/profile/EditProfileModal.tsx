@@ -25,6 +25,8 @@ export default function EditProfileModal({
   profile, saving, onSave, onClose,
 }: EditProfileModalProps) {
   const [name,       setName]       = useState(profile.name ?? '');
+  const [bio,        setBio]        = useState(profile.bio ?? '');
+  const [location,   setLocation]   = useState(profile.location ?? '');
   const [pronouns,   setPronouns]   = useState(profile.pronouns ?? '');
   const [identity,   setIdentity]   = useState<string[]>(profile.identity);
   const [interests,  setInterests]  = useState<string[]>(profile.interests);
@@ -46,7 +48,15 @@ export default function EditProfileModal({
   async function handleSave() {
     try {
       await onSave(
-        { name: name.trim(), pronouns, identity, interests, moods },
+        {
+          name:      name.trim(),
+          bio:       bio.trim(),
+          location:  location.trim(),
+          pronouns,
+          identity,
+          interests,
+          moods,
+        },
         avatarUri ?? undefined,
       );
       onClose();
@@ -109,6 +119,56 @@ export default function EditProfileModal({
                 paddingVertical: 12,
                 color: colors.foreground,
                 fontSize: 15,
+              }}
+            />
+          </View>
+
+          {/* Ubicación */}
+          <View className="gap-2">
+            <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Ubicación
+            </Text>
+            <TextInput
+              value={location}
+              onChangeText={setLocation}
+              placeholder="Ej: Bogotá, Colombia"
+              placeholderTextColor={colors.mutedForeground}
+              style={{
+                backgroundColor: colors.secondary,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                color: colors.foreground,
+                fontSize: 15,
+              }}
+            />
+          </View>
+
+          {/* Bio */}
+          <View className="gap-2">
+            <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Descripción
+            </Text>
+            <TextInput
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Cuéntanos algo sobre ti..."
+              placeholderTextColor={colors.mutedForeground}
+              multiline
+              numberOfLines={3}
+              style={{
+                backgroundColor: colors.secondary,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                color: colors.foreground,
+                fontSize: 15,
+                minHeight: 80,
+                textAlignVertical: 'top',
               }}
             />
           </View>
