@@ -252,6 +252,11 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
+          {profile.username && (
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, marginTop: 1 }}>
+              @{profile.username}
+            </Text>
+          )}
           <View className="flex-row flex-wrap gap-2 items-center mt-0.5">
             {profile.pronouns && (
               <Text className="text-sm text-muted-foreground">{profile.pronouns}</Text>

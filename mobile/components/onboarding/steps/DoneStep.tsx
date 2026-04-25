@@ -10,6 +10,7 @@ interface DoneStepProps {
 
 export default function DoneStep({ state }: DoneStepProps) {
   const summary = [
+    { icon: '👤',    label: state.username ? `@${state.username}` : '—' },
     { icon: '🏳️‍🌈', label: state.identity.join(', ') || '—' },
     { icon: '💬',    label: state.pronouns || '—'           },
     { icon: '✨',    label: state.interests.join(', ') || '—'},

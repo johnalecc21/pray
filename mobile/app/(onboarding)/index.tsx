@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOnboarding } from '../../features/onboarding/hooks/useOnboarding';
+import { useUsernameCheck } from '../../features/profile/hooks/useUsernameCheck';
 import { colors } from '../../lib/theme';
 import ProgressBar    from '../../components/onboarding/ProgressBar';
 import WelcomeStep    from '../../components/onboarding/steps/WelcomeStep';
@@ -15,9 +16,11 @@ import DoneStep       from '../../components/onboarding/steps/DoneStep';
 export default function OnboardingScreen() {
   const {
     step, state, uploading,
-    toggleMulti, setSingle, setAge, setAvatarUri,
+    toggleMulti, setSingle, setAge, setAvatarUri, setUsername,
     next, back, isLast, complete,
   } = useOnboarding();
+
+  const usernameStatus = useUsernameCheck(state.username);
 
   async function handleNext() {
     if (step === 1) {
@@ -25,7 +28,16 @@ export default function OnboardingScreen() {
         Alert.alert('Edad requerida', 'Debes tener al menos 18 años para usar Tribu.');
         return;
       }
+      if (!state.username) {
+        Alert.alert('Username requerido', 'Elige un @username para continuar.');
+        return;
+      }
+      if (usernameStatus !== 'available') {
+        Alert.alert('Username no disponible', 'Elige un username válido y disponible antes de continuar.');
+        return;
+      }
     }
+
     if (isLast) {
       try {
         await complete();
@@ -59,10 +71,13 @@ export default function OnboardingScreen() {
             selectedPronouns={state.pronouns}
             age={state.age}
             avatarUri={state.avatarUri}
+            username={state.username}
+            usernameStatus={usernameStatus}
             onToggleIdentity={(val) => toggleMulti('identity', val)}
             onSelectPronouns={(val) => setSingle('pronouns', val)}
             onAgeChange={setAge}
             onAvatarChange={setAvatarUri}
+            onUsernameChange={setUsername}
           />
         )}
 

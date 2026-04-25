@@ -19,6 +19,7 @@ export function useOnboarding() {
     moods:     ['Dating'],
     avatarUri: null,
     avatarUrl: null,
+    username:  '',
   });
 
   const toggleMulti = useCallback(
@@ -48,6 +49,10 @@ export function useOnboarding() {
     setState((prev) => ({ ...prev, avatarUri: uri, avatarUrl: null }));
   }, []);
 
+  const setUsername = useCallback((val: string) => {
+    setState((prev) => ({ ...prev, username: val.toLowerCase().replace(/[^a-z0-9_\-]/g, '') }));
+  }, []);
+
   const next = useCallback(() => setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1)), []);
   const back = useCallback(() => setStep((s) => Math.max(s - 1, 0)), []);
   const isLast = step === TOTAL_STEPS - 1;
@@ -73,6 +78,7 @@ export function useOnboarding() {
         interests:  state.interests,
         moods:      state.moods,
         avatar_url: avatarUrl,
+        username:   state.username,
       });
 
       await SecureStore.setItemAsync(ONBOARDING_KEY, 'true');
@@ -81,7 +87,7 @@ export function useOnboarding() {
     }
   }
 
-  return { step, state, uploading, toggleMulti, setSingle, setAge, setAvatarUri, next, back, isLast, complete };
+  return { step, state, uploading, toggleMulti, setSingle, setAge, setAvatarUri, setUsername, next, back, isLast, complete };
 }
 
 export async function hasCompletedOnboarding(): Promise<boolean> {

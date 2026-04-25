@@ -2,6 +2,7 @@ export interface UserProfile {
   id:         string;
   email:      string;
   name:       string | null;
+  username:   string | null;
   avatar_url: string | null;
   cover_url:  string | null;
   bio:        string | null;
@@ -17,6 +18,7 @@ export interface UserProfile {
 
 export interface ProfileUpdate {
   name?:       string;
+  username?:   string;
   identity?:   string[];
   pronouns?:   string;
   age?:        number | null;

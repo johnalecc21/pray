@@ -61,6 +61,7 @@ export interface Post {
   author: {
     id: string;
     name: string;
+    username: string | null;
     avatar_url: string | null;
   } | null;
 }

@@ -2,18 +2,23 @@ import { View, Text, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AvatarPicker from '../AvatarPicker';
 import SelectChip from '../SelectChip';
+import UsernameInput from '../../ui/UsernameInput';
 import { colors } from '../../../lib/theme';
 import { identityOptions, pronounOptions } from '../../../features/onboarding/data';
+import type { UsernameStatus } from '../../../features/profile/hooks/useUsernameCheck';
 
 interface IdentityStepProps {
-  selectedIdentity: string[];
+  selectedIdentity:  string[];
   selectedPronouns:  string;
   age:               number | null;
   avatarUri:         string | null;
+  username:          string;
+  usernameStatus:    UsernameStatus;
   onToggleIdentity:  (val: string) => void;
   onSelectPronouns:  (val: string) => void;
   onAgeChange:       (val: number | null) => void;
   onAvatarChange:    (uri: string) => void;
+  onUsernameChange:  (val: string) => void;
 }
 
 export default function IdentityStep({
@@ -21,10 +26,13 @@ export default function IdentityStep({
   selectedPronouns,
   age,
   avatarUri,
+  username,
+  usernameStatus,
   onToggleIdentity,
   onSelectPronouns,
   onAgeChange,
   onAvatarChange,
+  onUsernameChange,
 }: IdentityStepProps) {
   const ageInvalid = age !== null && (age < 18 || age > 99);
 
@@ -35,10 +43,22 @@ export default function IdentityStep({
         Puedes seleccionar varias. Solo tu comunidad las verá.
       </Text>
 
-      {/* Photo picker */}
+      {/* Foto de perfil */}
       <AvatarPicker uri={avatarUri} onChange={onAvatarChange} />
 
-      {/* Age */}
+      {/* Username */}
+      <Text className="text-xs text-muted-foreground font-semibold uppercase tracking-widest mb-2 mt-1">
+        Username
+      </Text>
+      <View className="mb-5">
+        <UsernameInput
+          value={username}
+          onChange={onUsernameChange}
+          status={usernameStatus}
+        />
+      </View>
+
+      {/* Edad */}
       <Text className="text-xs text-muted-foreground font-semibold uppercase tracking-widest mb-2">
         Edad
       </Text>

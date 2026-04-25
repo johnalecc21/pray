@@ -31,7 +31,9 @@ function HashtagText({ content }: { content: string }) {
 
 export default function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
   const name     = post.author?.name ?? 'Usuario';
-  const handle   = `@${name.toLowerCase().replace(/[^a-z0-9]/gi, '')}`;
+  const handle   = post.author?.username
+    ? `@${post.author.username}`
+    : `@${name.toLowerCase().replace(/[^a-z0-9]/gi, '')}`;
   const time     = formatRelativeTime(post.created_at);
   const gradient = userGradient(post.user_id);
 

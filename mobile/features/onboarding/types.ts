@@ -6,6 +6,7 @@ export interface OnboardingState {
   moods:     string[];
   avatarUri: string | null;   // local URI before upload
   avatarUrl: string | null;   // remote URL after upload
+  username:  string;
 }
 
 export interface IdentityOption {

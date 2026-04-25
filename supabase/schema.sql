@@ -10,12 +10,14 @@ create table public.profiles (
   id          uuid primary key references auth.users(id) on delete cascade,
   name        text,
   avatar_url  text,
+  username    text unique,
   created_at  timestamptz default now() not null,
   updated_at  timestamptz default now() not null
 );
 
--- Índice para búsquedas por nombre
-create index profiles_name_idx on public.profiles (name);
+-- Índices
+create index profiles_name_idx     on public.profiles (name);
+create index profiles_username_idx on public.profiles (username);
 
 -- -----------------------------------------------
 -- ROW LEVEL SECURITY
@@ -265,3 +267,10 @@ create policy "Users can upload post images"
 create policy "Users can delete own post images"
   on storage.objects for delete
   using (bucket_id = 'posts' and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- -----------------------------------------------
+-- MIGRACIÓN: agregar username a profiles existentes
+-- (ejecutar si la tabla ya existe sin la columna)
+-- -----------------------------------------------
+alter table public.profiles add column if not exists username text unique;
+create index if not exists profiles_username_idx on public.profiles (username);

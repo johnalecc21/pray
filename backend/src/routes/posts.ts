@@ -29,7 +29,7 @@ router.post('/', async (req: AuthRequest, res) => {
       mood:      mood       ?? null,
       mood_color: mood_color ?? null,
     })
-    .select('*, author:profiles!posts_user_id_fkey(id, name, avatar_url)')
+    .select('*, author:profiles!posts_user_id_fkey(id, name, avatar_url, username)')
     .single();
 
   if (error || !post) {
@@ -66,7 +66,7 @@ router.get('/feed', async (req: AuthRequest, res) => {
 
   const { data: posts, error } = await supabase
     .from('posts')
-    .select('*, author:profiles!posts_user_id_fkey(id, name, avatar_url)')
+    .select('*, author:profiles!posts_user_id_fkey(id, name, avatar_url, username)')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 

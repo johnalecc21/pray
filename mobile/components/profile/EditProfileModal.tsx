@@ -8,11 +8,13 @@ import { Ionicons } from '@expo/vector-icons';
 import AvatarPicker from '../onboarding/AvatarPicker';
 import SelectChip from '../onboarding/SelectChip';
 import LocationInput from './LocationInput';
+import UsernameInput from '../ui/UsernameInput';
 import { colors } from '../../lib/theme';
 import {
   identityOptions, pronounOptions,
   interestOptions, moodOptions,
 } from '../../features/onboarding/data';
+import { useUsernameCheck } from '../../features/profile/hooks/useUsernameCheck';
 import type { UserProfile, ProfileUpdate } from '../../features/profile/types';
 
 interface EditProfileModalProps {
@@ -25,8 +27,9 @@ interface EditProfileModalProps {
 export default function EditProfileModal({
   profile, saving, onSave, onClose,
 }: EditProfileModalProps) {
-  const [name,       setName]       = useState(profile.name ?? '');
-  const [bio,        setBio]        = useState(profile.bio ?? '');
+  const [name,       setName]       = useState(profile.name     ?? '');
+  const [username,   setUsername]   = useState(profile.username ?? '');
+  const [bio,        setBio]        = useState(profile.bio      ?? '');
   const [location,   setLocation]   = useState(profile.location ?? '');
   const [age,        setAge]        = useState<number | null>(profile.age ?? null);
   const [pronouns,   setPronouns]   = useState(profile.pronouns ?? '');
@@ -35,16 +38,10 @@ export default function EditProfileModal({
   const [moods,      setMoods]      = useState<string[]>(profile.moods);
   const [avatarUri,  setAvatarUri]  = useState<string | null>(null);
 
-  function toggleItem(
-    list: string[],
-    setList: (v: string[]) => void,
-    value: string,
-  ) {
-    setList(
-      list.includes(value)
-        ? list.filter((x) => x !== value)
-        : [...list, value],
-    );
+  const usernameStatus = useUsernameCheck(username, profile.username);
+
+  function toggleItem(list: string[], setList: (v: string[]) => void, value: string) {
+    setList(list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
   }
 
   async function handleSave() {
@@ -53,19 +50,28 @@ export default function EditProfileModal({
         Alert.alert('Edad inválida', 'Debes tener al menos 18 años.');
         return;
       }
-      await onSave(
-        {
-          name:      name.trim(),
-          bio:       bio.trim(),
-          location:  location.trim(),
-          age,
-          pronouns,
-          identity,
-          interests,
-          moods,
-        },
-        avatarUri ?? undefined,
-      );
+      if (username && usernameStatus !== 'available') {
+        Alert.alert('Username no disponible', 'Elige un username válido y disponible.');
+        return;
+      }
+
+      const changes: ProfileUpdate = {
+        name:      name.trim(),
+        bio:       bio.trim(),
+        location:  location.trim(),
+        age,
+        pronouns,
+        identity,
+        interests,
+        moods,
+      };
+
+      // Solo incluir username si cambió
+      if (username.trim() !== (profile.username ?? '')) {
+        changes.username = username.trim();
+      }
+
+      await onSave(changes, avatarUri ?? undefined);
       onClose();
     } catch (err) {
       Alert.alert(
@@ -102,10 +108,7 @@ export default function EditProfileModal({
           contentContainerStyle={{ paddingVertical: 20, gap: 24 }}
         >
           {/* Avatar */}
-          <AvatarPicker
-            uri={avatarUri ?? profile.avatar_url}
-            onChange={setAvatarUri}
-          />
+          <AvatarPicker uri={avatarUri ?? profile.avatar_url} onChange={setAvatarUri} />
 
           {/* Nombre */}
           <View className="gap-2">
@@ -119,14 +122,22 @@ export default function EditProfileModal({
               placeholderTextColor={colors.mutedForeground}
               style={{
                 backgroundColor: colors.secondary,
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: 12,
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                color: colors.foreground,
-                fontSize: 15,
+                borderWidth: 1, borderColor: colors.border,
+                borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+                color: colors.foreground, fontSize: 15,
               }}
+            />
+          </View>
+
+          {/* Username */}
+          <View className="gap-2">
+            <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Username
+            </Text>
+            <UsernameInput
+              value={username}
+              onChange={setUsername}
+              status={usernameStatus}
             />
           </View>
 
@@ -186,15 +197,10 @@ export default function EditProfileModal({
               numberOfLines={3}
               style={{
                 backgroundColor: colors.secondary,
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: 12,
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                color: colors.foreground,
-                fontSize: 15,
-                minHeight: 80,
-                textAlignVertical: 'top',
+                borderWidth: 1, borderColor: colors.border,
+                borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+                color: colors.foreground, fontSize: 15,
+                minHeight: 80, textAlignVertical: 'top',
               }}
             />
           </View>
@@ -206,9 +212,7 @@ export default function EditProfileModal({
             </Text>
             <View className="flex-row flex-wrap gap-2">
               {pronounOptions.map((opt) => (
-                <SelectChip
-                  key={opt.label}
-                  label={opt.label}
+                <SelectChip key={opt.label} label={opt.label}
                   selected={pronouns === opt.label}
                   onPress={() => setPronouns(opt.label)}
                   color={colors.primary}
@@ -224,9 +228,7 @@ export default function EditProfileModal({
             </Text>
             <View className="flex-row flex-wrap gap-2">
               {identityOptions.map((opt) => (
-                <SelectChip
-                  key={opt.label}
-                  label={opt.label}
+                <SelectChip key={opt.label} label={opt.label}
                   selected={identity.includes(opt.label)}
                   onPress={() => toggleItem(identity, setIdentity, opt.label)}
                   color={opt.color}
@@ -242,9 +244,7 @@ export default function EditProfileModal({
             </Text>
             <View className="flex-row flex-wrap gap-2">
               {moodOptions.map((opt) => (
-                <SelectChip
-                  key={opt.label}
-                  label={opt.label}
+                <SelectChip key={opt.label} label={opt.label}
                   selected={moods.includes(opt.label)}
                   onPress={() => toggleItem(moods, setMoods, opt.label)}
                   color={opt.color}
@@ -260,9 +260,7 @@ export default function EditProfileModal({
             </Text>
             <View className="flex-row flex-wrap gap-2">
               {interestOptions.map((opt) => (
-                <SelectChip
-                  key={opt.label}
-                  label={opt.label}
+                <SelectChip key={opt.label} label={opt.label}
                   selected={interests.includes(opt.label)}
                   onPress={() => toggleItem(interests, setInterests, opt.label)}
                   color={opt.color}
