@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AvatarPicker from '../onboarding/AvatarPicker';
 import SelectChip from '../onboarding/SelectChip';
+import LocationInput from './LocationInput';
 import { colors } from '../../lib/theme';
 import {
   identityOptions, pronounOptions,
@@ -128,22 +129,7 @@ export default function EditProfileModal({
             <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Ubicación
             </Text>
-            <TextInput
-              value={location}
-              onChangeText={setLocation}
-              placeholder="Ej: Bogotá, Colombia"
-              placeholderTextColor={colors.mutedForeground}
-              style={{
-                backgroundColor: colors.secondary,
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: 12,
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                color: colors.foreground,
-                fontSize: 15,
-              }}
-            />
+            <LocationInput value={location} onChange={setLocation} />
           </View>
 
           {/* Bio */}

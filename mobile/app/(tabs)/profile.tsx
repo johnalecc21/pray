@@ -117,7 +117,7 @@ export default function ProfileScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
-        <Text className="text-xl font-extrabold" style={{ color: colors.primary }}>
+        <Text className="text-xl font-extrabold " style={{ color: colors.primary }}>
           Mi Perfil
         </Text>
         <View className="flex-row gap-3">
