@@ -52,7 +52,8 @@ async function pickImage(): Promise<string | null> {
 export default function ProfileScreen() {
   const { logout }                                           = useAuth();
   const { profile, loading, saving, update,
-          changeAvatar, changeCover, addPhoto, removePhoto } = useProfile();
+          changeAvatar, changeCover, removeAvatar, removeCover,
+          addPhoto, removePhoto } = useProfile();
   const [editing,      setEditing]      = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
 
@@ -63,24 +64,70 @@ export default function ProfileScreen() {
   );
   const identityColorMap = Object.fromEntries(identityOptions.map((i) => [i.label, i.color]));
 
-  async function handleAvatarPress() {
-    const uri = await pickImage();
-    if (uri) {
-      try { await changeAvatar(uri); }
-      catch (err) { Alert.alert('Error', err instanceof Error ? err.message : 'Intenta de nuevo'); }
+  function handleAvatarPress() {
+    const buttons: any[] = [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Cambiar foto',
+        onPress: async () => {
+          const uri = await pickImage();
+          if (uri) {
+            try { await changeAvatar(uri); }
+            catch (err) { Alert.alert('Error', err instanceof Error ? err.message : 'Intenta de nuevo'); }
+          }
+        },
+      },
+    ];
+    if (profile?.avatar_url) {
+      buttons.push({
+        text: 'Eliminar foto',
+        style: 'destructive',
+        onPress: () => Alert.alert(
+          'Eliminar foto de perfil',
+          '¿Seguro que quieres eliminar tu foto de perfil?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Eliminar', style: 'destructive', onPress: () => removeAvatar() },
+          ],
+        ),
+      });
     }
+    Alert.alert('Foto de perfil', 'Elige una opción', buttons);
   }
 
-  async function handleCoverPress() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return;
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'], allowsEditing: true, aspect: [16, 7], quality: 0.8,
-    });
-    if (!res.canceled) {
-      try { await changeCover(res.assets[0].uri); }
-      catch (err) { Alert.alert('Error', err instanceof Error ? err.message : 'Intenta de nuevo'); }
+  function handleCoverPress() {
+    const buttons: any[] = [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Cambiar portada',
+        onPress: async () => {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') return;
+          const res = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'], allowsEditing: true, aspect: [16, 7], quality: 0.8,
+          });
+          if (!res.canceled) {
+            try { await changeCover(res.assets[0].uri); }
+            catch (err) { Alert.alert('Error', err instanceof Error ? err.message : 'Intenta de nuevo'); }
+          }
+        },
+      },
+    ];
+    if (profile?.cover_url) {
+      buttons.push({
+        text: 'Eliminar portada',
+        style: 'destructive',
+        onPress: () => Alert.alert(
+          'Eliminar portada',
+          '¿Seguro que quieres eliminar la foto de portada?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Eliminar', style: 'destructive', onPress: () => removeCover() },
+          ],
+        ),
+      });
     }
+    Alert.alert('Foto de portada', 'Elige una opción', buttons);
   }
 
   async function handleAddPhoto() {
@@ -275,15 +322,22 @@ export default function ProfileScreen() {
 
           <View className="flex-row flex-wrap gap-1">
             {profile.photos.map((url) => (
-              <TouchableOpacity
-                key={url}
-                onPress={() => setViewingPhoto(url)}
-                onLongPress={() => handleRemovePhoto(url)}
-                activeOpacity={0.85}
-                style={{ width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: 14, overflow: 'hidden' }}
-              >
-                <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-              </TouchableOpacity>
+              <View key={url} style={{ width: PHOTO_SIZE, height: PHOTO_SIZE }}>
+                <TouchableOpacity
+                  onPress={() => setViewingPhoto(url)}
+                  activeOpacity={0.85}
+                  style={{ width: '100%', height: '100%', borderRadius: 14, overflow: 'hidden' }}
+                >
+                  <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleRemovePhoto(url)}
+                  disabled={saving}
+                  style={{ position: 'absolute', top: 5, right: 5, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Ionicons name="close" size={13} color="#fff" />
+                </TouchableOpacity>
+              </View>
             ))}
 
             {/* Add photo placeholder */}

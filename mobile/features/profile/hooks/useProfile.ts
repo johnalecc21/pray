@@ -92,6 +92,28 @@ export function useProfile() {
     }
   }
 
+  async function removeAvatar() {
+    setSaving(true);
+    try {
+      if (profile?.avatar_url) await deleteByUrl(profile.avatar_url);
+      await api.put('/users/profile', { avatar_url: null });
+      setProfile((prev) => (prev ? { ...prev, avatar_url: null } : prev));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeCover() {
+    setSaving(true);
+    try {
+      if (profile?.cover_url) await deleteByUrl(profile.cover_url);
+      await api.put('/users/profile', { cover_url: null });
+      setProfile((prev) => (prev ? { ...prev, cover_url: null } : prev));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function removePhoto(url: string) {
     setSaving(true);
     try {
@@ -107,6 +129,8 @@ export function useProfile() {
   return {
     profile, loading, saving, error,
     refetch: load,
-    update, changeAvatar, changeCover, addPhoto, removePhoto,
+    update, changeAvatar, changeCover,
+    removeAvatar, removeCover,
+    addPhoto, removePhoto,
   };
 }
