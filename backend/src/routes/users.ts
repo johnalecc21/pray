@@ -8,13 +8,14 @@ router.use(requireAuth);
 
 // POST /users/onboarding
 router.post('/onboarding', async (req: AuthRequest, res) => {
-  const { identity, pronouns, interests, moods, avatar_url } = req.body;
+  const { identity, pronouns, age, interests, moods, avatar_url } = req.body;
   const userId = req.userId!;
 
   // 1. Update Supabase Auth user_metadata
   const metadata: Record<string, unknown> = {
     identity,
     pronouns,
+    age:                 age ?? null,
     interests,
     moods,
     onboarding_complete: true,
@@ -67,6 +68,7 @@ router.get('/me', async (req: AuthRequest, res) => {
     cover_url:  meta.cover_url   ?? null,
     bio:        meta.bio         ?? null,
     location:   meta.location    ?? null,
+    age:        meta.age         ?? null,
     identity:   meta.identity    ?? [],
     pronouns:   meta.pronouns    ?? null,
     interests:  meta.interests   ?? [],
@@ -78,13 +80,14 @@ router.get('/me', async (req: AuthRequest, res) => {
 
 // PUT /users/profile
 router.put('/profile', async (req: AuthRequest, res) => {
-  const { name, identity, pronouns, interests, moods, avatar_url, cover_url, bio, location, photos } = req.body;
+  const { name, identity, pronouns, age, interests, moods, avatar_url, cover_url, bio, location, photos } = req.body;
   const userId = req.userId!;
 
   const metadata: Record<string, unknown> = {};
   if (name       !== undefined) metadata.name       = name;
   if (identity   !== undefined) metadata.identity   = identity;
   if (pronouns   !== undefined) metadata.pronouns   = pronouns;
+  if (age        !== undefined) metadata.age        = age;
   if (interests  !== undefined) metadata.interests  = interests;
   if (moods      !== undefined) metadata.moods      = moods;
   if (avatar_url !== undefined) metadata.avatar_url = avatar_url;
