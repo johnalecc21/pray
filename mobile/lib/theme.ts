@@ -1,7 +1,7 @@
 export const colors = {
   background: '#010103',
   foreground: '#f7f7f7',
-  card: '#141220',
+  card: '#05050B',
   cardForeground: '#f7f7f7',
   popover: '#141220',
   popoverForeground: '#f7f7f7',

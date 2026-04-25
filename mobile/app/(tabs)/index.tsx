@@ -23,20 +23,18 @@ import type { FeedTab, Trend, Post } from '../../features/feed/types';
 function FeedListHeader({
   activeTab,
   onTabChange,
-  topTrend,
+  trends,
 }: {
-  activeTab:    FeedTab;
-  onTabChange:  (t: FeedTab) => void;
-  topTrend?:    Trend;
+  activeTab:   FeedTab;
+  onTabChange: (t: FeedTab) => void;
+  trends:      Trend[];
 }) {
   return (
     <>
       <FeedTabs activeTab={activeTab} onTabChange={onTabChange} />
       <QuickAccessRow />
       <StoriesRow />
-      {topTrend && (
-        <TrendingPill tag={`#${topTrend.name}`} />
-      )}
+      <TrendingPill trends={trends} />
     </>
   );
 }
@@ -49,41 +47,52 @@ export default function FeedScreen() {
     toggleLike, addPost, incrementCommentCount, refresh,
   } = useFeed();
 
-  const [showCreate,     setShowCreate]     = useState(false);
-  const [commentPostId,  setCommentPostId]  = useState<string | null>(null);
-  const [topTrend,       setTopTrend]       = useState<Trend | undefined>();
+  const [showCreate,    setShowCreate]    = useState(false);
+  const [commentPostId, setCommentPostId] = useState<string | null>(null);
+  const [trends,        setTrends]        = useState<Trend[]>([]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace('/(auth)/login');
-    }
+    if (!authLoading && !user) router.replace('/(auth)/login');
   }, [user, authLoading]);
 
-  useEffect(() => {
-    postsApi.getTrends()
-      .then(({ trends }) => { if (trends[0]) setTopTrend(trends[0]); })
-      .catch(() => {});
+  const fetchTrends = useCallback(async () => {
+    try {
+      const { trends: data } = await postsApi.getTrends();
+      setTrends(data);
+    } catch (err) {
+      console.error('trends fetch error:', err);
+    }
   }, []);
+
+  useEffect(() => { fetchTrends(); }, [fetchTrends]);
+
+  // Refresh trends junto con el feed
+  const handleRefresh = useCallback(() => {
+    refresh();
+    fetchTrends();
+  }, [refresh, fetchTrends]);
+
+  // Actualiza trends cuando se crea un post con hashtags
+  const handlePostCreated = useCallback((post: Post) => {
+    addPost(post);
+    setShowCreate(false);
+    if (post.hashtags.length > 0) fetchTrends();
+  }, [addPost, fetchTrends]);
+
+  const handleCommentAdded = useCallback(() => {
+    if (commentPostId) incrementCommentCount(commentPostId);
+  }, [commentPostId, incrementCommentCount]);
 
   const renderHeader = useCallback(
     () => (
       <FeedListHeader
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        topTrend={topTrend}
+        trends={trends}
       />
     ),
-    [activeTab, setActiveTab, topTrend],
+    [activeTab, setActiveTab, trends],
   );
-
-  const handlePostCreated = useCallback((post: Post) => {
-    addPost(post);
-    setShowCreate(false);
-  }, [addPost]);
-
-  const handleCommentAdded = useCallback(() => {
-    if (commentPostId) incrementCommentCount(commentPostId);
-  }, [commentPostId, incrementCommentCount]);
 
   if (authLoading || !user) return null;
 
@@ -103,7 +112,7 @@ export default function FeedScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
           ListHeaderComponent={renderHeader}
           refreshing={refreshing}
-          onRefresh={refresh}
+          onRefresh={handleRefresh}
           renderItem={({ item }) => (
             <PostCard
               post={item}

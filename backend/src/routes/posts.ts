@@ -10,6 +10,39 @@ function extractHashtags(content: string): string[] {
   return [...new Set(matches.map(h => h.slice(1).toLowerCase()))];
 }
 
+// Obtiene el ID del hashtag, creándolo si no existe.
+// Usa select-then-insert para evitar el bug de .single() con upsert en conflict.
+async function getOrCreateHashtag(name: string): Promise<string | null> {
+  // 1. Buscar existente
+  const { data: existing } = await supabase
+    .from('hashtags')
+    .select('id')
+    .eq('name', name)
+    .maybeSingle();
+  if (existing?.id) return existing.id;
+
+  // 2. Insertar nuevo
+  const { data: inserted, error } = await supabase
+    .from('hashtags')
+    .insert({ name })
+    .select('id')
+    .maybeSingle();
+  if (error) {
+    // Si fue un duplicate en una carrera de concurrencia, reintentar select
+    if (error.code === '23505') {
+      const { data: retry } = await supabase
+        .from('hashtags')
+        .select('id')
+        .eq('name', name)
+        .maybeSingle();
+      return retry?.id ?? null;
+    }
+    console.error(`getOrCreateHashtag("${name}"):`, error.message);
+    return null;
+  }
+  return inserted?.id ?? null;
+}
+
 // POST /posts — crear post
 router.post('/', async (req: AuthRequest, res) => {
   const { content, image_url, mood, mood_color } = req.body;
@@ -39,19 +72,16 @@ router.post('/', async (req: AuthRequest, res) => {
 
   const tagNames = extractHashtags(content);
 
-  if (tagNames.length) {
-    for (const name of tagNames) {
-      const { data: tag } = await supabase
-        .from('hashtags')
-        .upsert({ name }, { onConflict: 'name' })
-        .select('id')
-        .single();
+  for (const name of tagNames) {
+    const tagId = await getOrCreateHashtag(name);
+    if (!tagId) continue;
 
-      if (tag) {
-        await supabase
-          .from('post_hashtags')
-          .insert({ post_id: post.id, hashtag_id: tag.id });
-      }
+    const { error: pivotError } = await supabase
+      .from('post_hashtags')
+      .insert({ post_id: post.id, hashtag_id: tagId });
+
+    if (pivotError) {
+      console.error(`post_hashtags insert ("${name}"):`, pivotError.message);
     }
   }
 
