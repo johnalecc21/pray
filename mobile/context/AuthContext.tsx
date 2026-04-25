@@ -25,18 +25,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Restore session from SecureStore on app start
     supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session) {
+      if (data.session?.access_token) {
         try {
           const me = await api.get<User>('/users/me');
           setUser(me);
         } catch {
+          // Token inválido o expirado — limpiar sesión
           await supabase.auth.signOut();
+          setUser(null);
         }
       }
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
 
     // Listen to Supabase auth changes (OAuth redirects, token refresh)
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
