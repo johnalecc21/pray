@@ -1,6 +1,7 @@
 export interface OnboardingState {
   identity:  string[];
   pronouns:  string;
+  age:       number | null;
   interests: string[];
   moods:     string[];
   avatarUri: string | null;   // local URI before upload

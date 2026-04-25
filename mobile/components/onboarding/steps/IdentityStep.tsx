@@ -1,4 +1,5 @@
-import { View, Text } from 'react-native';
+import { View, Text, TextInput } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AvatarPicker from '../AvatarPicker';
 import SelectChip from '../SelectChip';
 import { colors } from '../../../lib/theme';
@@ -7,20 +8,26 @@ import { identityOptions, pronounOptions } from '../../../features/onboarding/da
 interface IdentityStepProps {
   selectedIdentity: string[];
   selectedPronouns:  string;
+  age:               number | null;
   avatarUri:         string | null;
   onToggleIdentity:  (val: string) => void;
   onSelectPronouns:  (val: string) => void;
+  onAgeChange:       (val: number | null) => void;
   onAvatarChange:    (uri: string) => void;
 }
 
 export default function IdentityStep({
   selectedIdentity,
   selectedPronouns,
+  age,
   avatarUri,
   onToggleIdentity,
   onSelectPronouns,
+  onAgeChange,
   onAvatarChange,
 }: IdentityStepProps) {
+  const ageInvalid = age !== null && (age < 18 || age > 99);
+
   return (
     <View>
       <Text className="text-2xl font-extrabold text-foreground mb-1">Tu identidad</Text>
@@ -30,6 +37,47 @@ export default function IdentityStep({
 
       {/* Photo picker */}
       <AvatarPicker uri={avatarUri} onChange={onAvatarChange} />
+
+      {/* Age */}
+      <Text className="text-xs text-muted-foreground font-semibold uppercase tracking-widest mb-2">
+        Edad
+      </Text>
+      <View className="mb-1">
+        <TextInput
+          value={age !== null ? String(age) : ''}
+          onChangeText={(text) => {
+            const num = parseInt(text, 10);
+            onAgeChange(text === '' ? null : isNaN(num) ? null : num);
+          }}
+          placeholder="Ej: 27"
+          placeholderTextColor={colors.mutedForeground}
+          keyboardType="numeric"
+          maxLength={2}
+          style={{
+            backgroundColor:   colors.secondary,
+            borderWidth:       1,
+            borderColor:       ageInvalid ? colors.destructive : colors.border,
+            borderRadius:      12,
+            paddingHorizontal: 14,
+            paddingVertical:   12,
+            color:             colors.foreground,
+            fontSize:          15,
+            width:             100,
+          }}
+        />
+      </View>
+      {ageInvalid ? (
+        <View className="flex-row items-center gap-1 mb-5">
+          <Ionicons name="alert-circle-outline" size={13} color={colors.destructive} />
+          <Text style={{ color: colors.destructive, fontSize: 12 }}>
+            Debes tener al menos 18 años para usar Tribu
+          </Text>
+        </View>
+      ) : (
+        <Text className="text-xs text-muted-foreground mb-5">
+          Solo para mayores de 18 años
+        </Text>
+      )}
 
       {/* Identity chips */}
       <Text className="text-xs text-muted-foreground font-semibold uppercase tracking-widest mb-2">

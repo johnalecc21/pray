@@ -242,9 +242,16 @@ export default function ProfileScreen() {
 
         {/* Name + identity */}
         <View className="px-5 mt-3 gap-1">
-          <Text className="text-2xl font-extrabold text-foreground">
-            {profile.name ?? 'Sin nombre'}
-          </Text>
+          <View className="flex-row items-center gap-2">
+            <Text className="text-2xl font-extrabold text-foreground">
+              {profile.name ?? 'Sin nombre'}
+            </Text>
+            {profile.age && (
+              <View style={{ backgroundColor: `${colors.primary}20`, borderRadius: 100, paddingHorizontal: 8, paddingVertical: 2 }}>
+                <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>{profile.age}</Text>
+              </View>
+            )}
+          </View>
           <View className="flex-row flex-wrap gap-2 items-center mt-0.5">
             {profile.pronouns && (
               <Text className="text-sm text-muted-foreground">{profile.pronouns}</Text>

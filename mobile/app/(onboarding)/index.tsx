@@ -15,11 +15,17 @@ import DoneStep       from '../../components/onboarding/steps/DoneStep';
 export default function OnboardingScreen() {
   const {
     step, state, uploading,
-    toggleMulti, setSingle, setAvatarUri,
+    toggleMulti, setSingle, setAge, setAvatarUri,
     next, back, isLast, complete,
   } = useOnboarding();
 
   async function handleNext() {
+    if (step === 1) {
+      if (!state.age || state.age < 18) {
+        Alert.alert('Edad requerida', 'Debes tener al menos 18 años para usar Tribu.');
+        return;
+      }
+    }
     if (isLast) {
       try {
         await complete();
@@ -51,9 +57,11 @@ export default function OnboardingScreen() {
           <IdentityStep
             selectedIdentity={state.identity}
             selectedPronouns={state.pronouns}
+            age={state.age}
             avatarUri={state.avatarUri}
             onToggleIdentity={(val) => toggleMulti('identity', val)}
             onSelectPronouns={(val) => setSingle('pronouns', val)}
+            onAgeChange={setAge}
             onAvatarChange={setAvatarUri}
           />
         )}

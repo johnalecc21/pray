@@ -28,6 +28,7 @@ export default function EditProfileModal({
   const [name,       setName]       = useState(profile.name ?? '');
   const [bio,        setBio]        = useState(profile.bio ?? '');
   const [location,   setLocation]   = useState(profile.location ?? '');
+  const [age,        setAge]        = useState<number | null>(profile.age ?? null);
   const [pronouns,   setPronouns]   = useState(profile.pronouns ?? '');
   const [identity,   setIdentity]   = useState<string[]>(profile.identity);
   const [interests,  setInterests]  = useState<string[]>(profile.interests);
@@ -48,11 +49,16 @@ export default function EditProfileModal({
 
   async function handleSave() {
     try {
+      if (age !== null && age < 18) {
+        Alert.alert('Edad inválida', 'Debes tener al menos 18 años.');
+        return;
+      }
       await onSave(
         {
           name:      name.trim(),
           bio:       bio.trim(),
           location:  location.trim(),
+          age,
           pronouns,
           identity,
           interests,
@@ -130,6 +136,40 @@ export default function EditProfileModal({
               Ubicación
             </Text>
             <LocationInput value={location} onChange={setLocation} />
+          </View>
+
+          {/* Edad */}
+          <View className="gap-2">
+            <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Edad
+            </Text>
+            <TextInput
+              value={age !== null ? String(age) : ''}
+              onChangeText={(text) => {
+                const num = parseInt(text, 10);
+                setAge(text === '' ? null : isNaN(num) ? null : num);
+              }}
+              placeholder="Ej: 27"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="numeric"
+              maxLength={2}
+              style={{
+                backgroundColor:   colors.secondary,
+                borderWidth:       1,
+                borderColor:       (age !== null && age < 18) ? colors.destructive : colors.border,
+                borderRadius:      12,
+                paddingHorizontal: 14,
+                paddingVertical:   12,
+                color:             colors.foreground,
+                fontSize:          15,
+                width:             100,
+              }}
+            />
+            {age !== null && age < 18 && (
+              <Text style={{ color: colors.destructive, fontSize: 12 }}>
+                Debes tener al menos 18 años
+              </Text>
+            )}
           </View>
 
           {/* Bio */}

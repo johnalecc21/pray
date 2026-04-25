@@ -14,6 +14,7 @@ export function useOnboarding() {
   const [state, setState] = useState<OnboardingState>({
     identity:  ['Gay'],
     pronouns:  'él/him',
+    age:       null,
     interests: ['Gym', 'Música'],
     moods:     ['Dating'],
     avatarUri: null,
@@ -38,6 +39,10 @@ export function useOnboarding() {
     },
     [],
   );
+
+  const setAge = useCallback((val: number | null) => {
+    setState((prev) => ({ ...prev, age: val }));
+  }, []);
 
   const setAvatarUri = useCallback((uri: string) => {
     setState((prev) => ({ ...prev, avatarUri: uri, avatarUrl: null }));
@@ -64,6 +69,7 @@ export function useOnboarding() {
       await api.post('/users/onboarding', {
         identity:   state.identity,
         pronouns:   state.pronouns,
+        age:        state.age,
         interests:  state.interests,
         moods:      state.moods,
         avatar_url: avatarUrl,
@@ -75,7 +81,7 @@ export function useOnboarding() {
     }
   }
 
-  return { step, state, uploading, toggleMulti, setSingle, setAvatarUri, next, back, isLast, complete };
+  return { step, state, uploading, toggleMulti, setSingle, setAge, setAvatarUri, next, back, isLast, complete };
 }
 
 export async function hasCompletedOnboarding(): Promise<boolean> {

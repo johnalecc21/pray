@@ -6,6 +6,7 @@ export interface UserProfile {
   cover_url:  string | null;
   bio:        string | null;
   location:   string | null;
+  age:        number | null;
   identity:   string[];
   pronouns:   string | null;
   interests:  string[];
@@ -18,6 +19,7 @@ export interface ProfileUpdate {
   name?:       string;
   identity?:   string[];
   pronouns?:   string;
+  age?:        number | null;
   interests?:  string[];
   moods?:      string[];
   avatar_url?: string;
