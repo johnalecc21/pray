@@ -51,6 +51,10 @@ export function useFeed() {
     setPosts(prev => [post, ...prev]);
   }, []);
 
+  const removePost = useCallback((postId: string) => {
+    setPosts(prev => prev.filter(p => p.id !== postId));
+  }, []);
+
   const incrementCommentCount = useCallback((postId: string) => {
     setPosts(prev => prev.map(p =>
       p.id === postId ? { ...p, comments_count: p.comments_count + 1 } : p
@@ -63,6 +67,7 @@ export function useFeed() {
     loading, refreshing,
     toggleLike,
     addPost,
+    removePost,
     incrementCommentCount,
     refresh: () => fetchPosts(true),
   };

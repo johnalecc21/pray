@@ -1,5 +1,6 @@
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../lib/theme';
 import { userGradient, formatRelativeTime } from '../../features/feed/utils';
 import PostActions from './PostActions';
@@ -10,6 +11,8 @@ interface PostCardProps {
   onLike:     () => void;
   onComment?: () => void;
   onShare?:   () => void;
+  isOwn?:     boolean;
+  onDelete?:  () => void;
 }
 
 function HashtagText({ content }: { content: string }) {
@@ -29,7 +32,7 @@ function HashtagText({ content }: { content: string }) {
   );
 }
 
-export default function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
+export default function PostCard({ post, onLike, onComment, onShare, isOwn, onDelete }: PostCardProps) {
   const name     = post.author?.name ?? 'Usuario';
   const handle   = post.author?.username
     ? `@${post.author.username}`
@@ -90,20 +93,34 @@ export default function PostCard({ post, onLike, onComment, onShare }: PostCardP
           </View>
         </View>
 
-        {post.mood && (
-          <View
-            style={{
-              backgroundColor: `${post.mood_color ?? colors.pride.purple}22`,
-              borderRadius: 999,
-              paddingHorizontal: 8, paddingVertical: 3,
-              flexShrink: 0,
-            }}
-          >
-            <Text style={{ fontSize: 10, fontWeight: '700', color: post.mood_color ?? colors.pride.purple }}>
-              {post.mood}
-            </Text>
-          </View>
-        )}
+        <View style={{ alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+          {post.mood && (
+            <View
+              style={{
+                backgroundColor: `${post.mood_color ?? colors.pride.purple}22`,
+                borderRadius: 999,
+                paddingHorizontal: 8, paddingVertical: 3,
+              }}
+            >
+              <Text style={{ fontSize: 10, fontWeight: '700', color: post.mood_color ?? colors.pride.purple }}>
+                {post.mood}
+              </Text>
+            </View>
+          )}
+          {isOwn && onDelete && (
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert('Eliminar post', '¿Quieres eliminar esta publicación?', [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Eliminar', style: 'destructive', onPress: onDelete },
+                ])
+              }
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="ellipsis-horizontal" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Contenido */}

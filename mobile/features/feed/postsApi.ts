@@ -1,5 +1,5 @@
 import { api } from '../../lib/api';
-import type { Post, Comment, Trend } from './types';
+import type { Post, Comment, Trend, UserReply } from './types';
 
 export const postsApi = {
   getFeed: (limit = 20, offset = 0) =>
@@ -29,4 +29,13 @@ export const postsApi = {
 
   getTrends: () =>
     api.get<{ trends: Trend[] }>('/posts/trends'),
+
+  getPostsByUser: (userId: string, limit = 20, offset = 0) =>
+    api.get<{ posts: Post[] }>(`/posts/by-user/${userId}?limit=${limit}&offset=${offset}`),
+
+  getLikedPosts: (limit = 20, offset = 0) =>
+    api.get<{ posts: Post[] }>(`/posts/liked-by-me?limit=${limit}&offset=${offset}`),
+
+  getUserReplies: (limit = 20, offset = 0) =>
+    api.get<{ replies: UserReply[] }>(`/posts/user-replies?limit=${limit}&offset=${offset}`),
 };

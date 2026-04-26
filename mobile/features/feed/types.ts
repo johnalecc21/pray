@@ -84,3 +84,28 @@ export interface Trend {
   name: string;
   posts_count: number;
 }
+
+export interface UserReply {
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  author: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+  } | null;
+  post: {
+    id: string;
+    content: string;
+    user_id: string;
+    created_at: string;
+    author: {
+      id: string;
+      name: string;
+      avatar_url: string | null;
+      username: string | null;
+    } | null;
+  } | null;
+}

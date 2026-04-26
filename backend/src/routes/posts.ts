@@ -156,6 +156,124 @@ router.get('/trends', async (_req, res) => {
   res.json({ trends: data ?? [] });
 });
 
+// GET /posts/by-user/:userId — posts de un usuario específico
+router.get('/by-user/:userId', async (req: AuthRequest, res) => {
+  const { userId } = req.params;
+  const requesterId = req.userId!;
+  const limit  = Math.min(Number(req.query.limit ?? 20), 50);
+  const offset = Number(req.query.offset ?? 0);
+
+  const { data: posts, error } = await supabase
+    .from('posts')
+    .select('*, author:profiles!posts_user_id_fkey(id, name, avatar_url, username)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (!posts?.length) { res.json({ posts: [] }); return; }
+
+  const postIds = posts.map(p => p.id);
+
+  const [{ data: phRows }, { data: likeRows }] = await Promise.all([
+    supabase
+      .from('post_hashtags')
+      .select('post_id, hashtag:hashtags!post_hashtags_hashtag_id_fkey(name)')
+      .in('post_id', postIds),
+    supabase
+      .from('post_likes')
+      .select('post_id')
+      .eq('user_id', requesterId)
+      .in('post_id', postIds),
+  ]);
+
+  const likedSet = new Set((likeRows ?? []).map(l => l.post_id));
+  const tagsByPost: Record<string, string[]> = {};
+  for (const row of phRows ?? []) {
+    const name = (row.hashtag as any)?.name as string | undefined;
+    if (name) (tagsByPost[row.post_id] ??= []).push(name);
+  }
+
+  res.json({
+    posts: posts.map(p => ({
+      ...p,
+      hashtags:       tagsByPost[p.id] ?? [],
+      is_liked_by_me: likedSet.has(p.id),
+    })),
+  });
+});
+
+// GET /posts/liked-by-me — posts que el usuario actual ha likeado
+router.get('/liked-by-me', async (req: AuthRequest, res) => {
+  const userId = req.userId!;
+  const limit  = Math.min(Number(req.query.limit ?? 20), 50);
+  const offset = Number(req.query.offset ?? 0);
+
+  const { data: likeRows, error: likeError } = await supabase
+    .from('post_likes')
+    .select('post_id')
+    .eq('user_id', userId);
+
+  if (likeError) { res.status(500).json({ error: likeError.message }); return; }
+  if (!likeRows?.length) { res.json({ posts: [] }); return; }
+
+  const postIds = likeRows.map(r => r.post_id);
+
+  const { data: posts, error } = await supabase
+    .from('posts')
+    .select('*, author:profiles!posts_user_id_fkey(id, name, avatar_url, username)')
+    .in('id', postIds)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (!posts?.length) { res.json({ posts: [] }); return; }
+
+  const allPostIds = posts.map(p => p.id);
+  const { data: phRows } = await supabase
+    .from('post_hashtags')
+    .select('post_id, hashtag:hashtags!post_hashtags_hashtag_id_fkey(name)')
+    .in('post_id', allPostIds);
+
+  const tagsByPost: Record<string, string[]> = {};
+  for (const row of phRows ?? []) {
+    const name = (row.hashtag as any)?.name as string | undefined;
+    if (name) (tagsByPost[row.post_id] ??= []).push(name);
+  }
+
+  res.json({
+    posts: posts.map(p => ({
+      ...p,
+      hashtags:       tagsByPost[p.id] ?? [],
+      is_liked_by_me: true,
+    })),
+  });
+});
+
+// GET /posts/user-replies — comentarios del usuario actual con contexto del post
+router.get('/user-replies', async (req: AuthRequest, res) => {
+  const userId = req.userId!;
+  const limit  = Math.min(Number(req.query.limit ?? 20), 50);
+  const offset = Number(req.query.offset ?? 0);
+
+  const { data: comments, error } = await supabase
+    .from('post_comments')
+    .select(`
+      *,
+      post:posts!post_comments_post_id_fkey(
+        id, content, user_id, created_at,
+        author:profiles!posts_user_id_fkey(id, name, avatar_url, username)
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) { res.status(500).json({ error: error.message }); return; }
+
+  res.json({ replies: comments ?? [] });
+});
+
 // POST /posts/:id/like — toggle like
 router.post('/:id/like', async (req: AuthRequest, res) => {
   const userId = req.userId!;

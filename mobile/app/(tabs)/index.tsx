@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState } from 'react';
-import { View, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,7 +44,7 @@ export default function FeedScreen() {
   const {
     activeTab, setActiveTab,
     posts, loading, refreshing,
-    toggleLike, addPost, incrementCommentCount, refresh,
+    toggleLike, addPost, removePost, incrementCommentCount, refresh,
   } = useFeed();
 
   const [showCreate,    setShowCreate]    = useState(false);
@@ -83,6 +83,15 @@ export default function FeedScreen() {
     if (commentPostId) incrementCommentCount(commentPostId);
   }, [commentPostId, incrementCommentCount]);
 
+  const handleDeletePost = useCallback(async (postId: string) => {
+    try {
+      await postsApi.deletePost(postId);
+      removePost(postId);
+    } catch {
+      Alert.alert('Error', 'No se pudo eliminar el post. Intenta de nuevo.');
+    }
+  }, [removePost]);
+
   const renderHeader = useCallback(
     () => (
       <FeedListHeader
@@ -118,6 +127,8 @@ export default function FeedScreen() {
               post={item}
               onLike={() => toggleLike(item.id)}
               onComment={() => setCommentPostId(item.id)}
+              isOwn={item.user_id === user?.id}
+              onDelete={() => handleDeletePost(item.id)}
             />
           )}
           extraData={activeTab}
