@@ -9,7 +9,7 @@ export function useLocation() {
   const [loading, setLoading] = useState(false);
   const [saved,   setSaved]   = useState(false);
 
-  async function saveCurrentPosition() {
+  const saveCurrentPosition = useCallback(async (): Promise<boolean> => {
     try {
       const { coords } = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
@@ -19,43 +19,47 @@ export function useLocation() {
         longitude: coords.longitude,
       });
       setSaved(true);
-    } catch {}
-  }
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
-  // On mount: if permission already granted, silently update coordinates
+  // On mount: check existing permission without requesting
   useEffect(() => {
     (async () => {
       const { status: perm } = await Location.getForegroundPermissionsAsync();
       if (perm === 'granted') {
         setStatus('granted');
-        setSaved(true); // treat as already configured; still refresh in background
+        // saved stays false until saveCurrentPosition succeeds
         saveCurrentPosition();
       } else if (perm === 'denied') {
         setStatus('denied');
       }
-      // 'undetermined' stays as 'unknown' → banner shows
+      // 'undetermined' → status stays 'unknown' → banner shows
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [saveCurrentPosition]);
 
   const requestAndSave = useCallback(async (): Promise<boolean> => {
     setLoading(true);
     try {
+      // If already granted, skip the dialog and just save
+      if (status === 'granted') {
+        return await saveCurrentPosition();
+      }
       const { status: perm } = await Location.requestForegroundPermissionsAsync();
       if (perm !== 'granted') {
         setStatus('denied');
         return false;
       }
       setStatus('granted');
-      await saveCurrentPosition();
-      return true;
+      return await saveCurrentPosition();
     } catch {
       return false;
     } finally {
       setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [status, saveCurrentPosition]);
 
   return { status, loading, saved, requestAndSave };
 }

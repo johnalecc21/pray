@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { api } from '../lib/api';
 
@@ -25,13 +26,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Manage auto-refresh based on app foreground/background state (Supabase RN recommendation)
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        supabase.auth.startAutoRefresh();
+      } else {
+        supabase.auth.stopAutoRefresh();
+      }
+    });
+
     supabase.auth.getSession().then(async ({ data }) => {
       if (data.session?.access_token) {
         try {
           const me = await api.get<User>('/users/me');
           setUser(me);
         } catch {
-          // Token inválido o expirado — limpiar sesión
           await supabase.auth.signOut();
           setUser(null);
         }
@@ -39,12 +48,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }).catch(() => setLoading(false));
 
-    // Listen to Supabase auth changes (OAuth redirects, token refresh)
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) setUser(null);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      appStateSub.remove();
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   async function register(name: string, email: string, password: string) {

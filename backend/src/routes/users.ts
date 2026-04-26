@@ -248,6 +248,8 @@ router.post('/onboarding', async (req: AuthRequest, res) => {
       return;
     }
     console.error('Profile upsert error:', profileError.message);
+    res.status(500).json({ error: profileError.message });
+    return;
   }
 
   res.json({ ok: true });

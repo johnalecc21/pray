@@ -373,15 +373,15 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Location banner — shown while permission is undetermined */}
-        {!locSaved && locStatus === 'unknown' && (
+        {/* Location banner — oculto solo cuando el guardado fue exitoso o permiso negado */}
+        {!locSaved && locStatus !== 'denied' && (
           <TouchableOpacity
             onPress={async () => {
               const ok = await requestAndSave();
-              if (!ok) {
+              if (!ok && locStatus === 'denied') {
                 Alert.alert(
                   'Permiso necesario',
-                  'Activa la ubicación en Configuración → Privacidad → Ubicación para mostrar tu distancia a otros usuarios.',
+                  'Ve a Configuración → Privacidad → Ubicación y actívala para mostrar tu distancia a otros usuarios.',
                   [{ text: 'Entendido' }],
                 );
               }
@@ -404,13 +404,13 @@ export default function ProfileScreen() {
             )}
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 13, fontWeight: '700', color: colors.pride.blue }}>
-                Activar distancia
+                {locStatus === 'granted' ? 'Actualizando ubicación…' : 'Activar distancia'}
               </Text>
               <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 1 }}>
                 Muestra a otros usuarios qué tan cerca estás
               </Text>
             </View>
-            {!locLoading && (
+            {!locLoading && locStatus !== 'granted' && (
               <Ionicons name="chevron-forward" size={14} color={colors.mutedForeground} />
             )}
           </TouchableOpacity>
