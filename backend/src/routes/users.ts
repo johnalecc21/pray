@@ -365,6 +365,8 @@ router.put('/profile', async (req: AuthRequest, res) => {
       return;
     }
     console.error('Profile upsert error:', profileError.message);
+    res.status(500).json({ error: profileError.message });
+    return;
   }
 
   res.json({ ok: true });
@@ -418,15 +420,15 @@ router.get('/:userId', async (req: AuthRequest, res) => {
   const theirLikedIds = new Set<string>((theirLikes ?? []).map((r: any) => r.post_id as string));
   const sharedLiked   = [...myLikedIds].filter(id => theirLikedIds.has(id)).length;
 
+  // Prefer profiles table, fall back to user_metadata (in case profiles upsert lagged)
+  const myLat    = myProfile?.latitude      ?? (myMeta.latitude      as number | undefined) ?? null;
+  const myLon    = myProfile?.longitude     ?? (myMeta.longitude     as number | undefined) ?? null;
+  const theirLat = targetProfile?.latitude  ?? (meta.latitude        as number | undefined) ?? null;
+  const theirLon = targetProfile?.longitude ?? (meta.longitude       as number | undefined) ?? null;
+
   let distance_km: number | null = null;
-  if (
-    targetProfile?.latitude  != null && targetProfile?.longitude != null &&
-    myProfile?.latitude      != null && myProfile?.longitude     != null
-  ) {
-    distance_km = Math.round(haversineKm(
-      myProfile.latitude,     myProfile.longitude,
-      targetProfile.latitude, targetProfile.longitude,
-    ));
+  if (theirLat != null && theirLon != null && myLat != null && myLon != null) {
+    distance_km = parseFloat(haversineKm(myLat, myLon, theirLat, theirLon).toFixed(3));
   }
 
   const { score, factors } = computeMatchScore({

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, Image, TouchableOpacity,
-  ActivityIndicator, Alert, Dimensions,
+  ActivityIndicator, Alert, Dimensions, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -113,7 +113,7 @@ export default function ProfileScreen() {
     toggleLike, deletePost, incrementCommentCount,
   } = usePosts();
 
-  const { status: locStatus, loading: locLoading, saved: locSaved, requestAndSave } = useLocation();
+  const { status: locStatus } = useLocation();
 
   const [editing,       setEditing]       = useState(false);
   const [viewingPhoto,  setViewingPhoto]  = useState<string | null>(null);
@@ -343,6 +343,33 @@ export default function ProfileScreen() {
           {profile.bio ? <Text className="mt-2 text-sm text-muted-foreground leading-relaxed">{profile.bio}</Text> : null}
         </View>
 
+        {/* Location banner — only shown when permission is denied */}
+        {locStatus === 'denied' && (
+          <TouchableOpacity
+            onPress={() => Linking.openSettings()}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              marginHorizontal: 16, marginTop: 14,
+              paddingHorizontal: 14, paddingVertical: 11,
+              borderRadius: 14, borderWidth: 1,
+              backgroundColor: `${colors.pride.pink}10`,
+              borderColor: `${colors.pride.pink}30`,
+            }}
+          >
+            <Ionicons name="location-outline" size={16} color={colors.pride.pink} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.pride.pink }}>
+                Permiso de ubicación desactivado
+              </Text>
+              <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 1 }}>
+                Toca para abrir configuración y activarlo
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={13} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        )}
+
         {/* Mood */}
         {profile.moods.length > 0 && (
           <View className="px-5 mt-5">
@@ -371,49 +398,6 @@ export default function ProfileScreen() {
               ))}
             </View>
           </View>
-        )}
-
-        {/* Location banner — oculto solo cuando el guardado fue exitoso o permiso negado */}
-        {!locSaved && locStatus !== 'denied' && (
-          <TouchableOpacity
-            onPress={async () => {
-              const ok = await requestAndSave();
-              if (!ok && locStatus === 'denied') {
-                Alert.alert(
-                  'Permiso necesario',
-                  'Ve a Configuración → Privacidad → Ubicación y actívala para mostrar tu distancia a otros usuarios.',
-                  [{ text: 'Entendido' }],
-                );
-              }
-            }}
-            disabled={locLoading}
-            activeOpacity={0.8}
-            style={{
-              flexDirection: 'row', alignItems: 'center', gap: 10,
-              marginHorizontal: 16, marginTop: 16, marginBottom: 4,
-              paddingHorizontal: 14, paddingVertical: 12,
-              borderRadius: 14, borderWidth: 1,
-              backgroundColor: `${colors.pride.blue}10`,
-              borderColor: `${colors.pride.blue}30`,
-            }}
-          >
-            {locLoading ? (
-              <ActivityIndicator size="small" color={colors.pride.blue} />
-            ) : (
-              <Ionicons name="location-outline" size={18} color={colors.pride.blue} />
-            )}
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.pride.blue }}>
-                {locStatus === 'granted' ? 'Actualizando ubicación…' : 'Activar distancia'}
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 1 }}>
-                Muestra a otros usuarios qué tan cerca estás
-              </Text>
-            </View>
-            {!locLoading && locStatus !== 'granted' && (
-              <Ionicons name="chevron-forward" size={14} color={colors.mutedForeground} />
-            )}
-          </TouchableOpacity>
         )}
 
         {/* Tab bar */}

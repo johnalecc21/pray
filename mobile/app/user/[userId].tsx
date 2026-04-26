@@ -245,8 +245,14 @@ export default function UserProfileScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
                 <Ionicons name="location-outline" size={13} color={colors.mutedForeground} />
                 <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
-                  {[profile.location, profile.distance_km != null ? `${profile.distance_km} km` : null]
-                    .filter(Boolean).join(' · ')}
+                  {[
+                    profile.location,
+                    profile.distance_km != null
+                      ? profile.distance_km < 1
+                        ? `${Math.round(profile.distance_km * 1000)} m`
+                        : `${profile.distance_km % 1 === 0 ? profile.distance_km : profile.distance_km.toFixed(1)} km`
+                      : null,
+                  ].filter(Boolean).join(' · ')}
                 </Text>
               </View>
             ) : null}

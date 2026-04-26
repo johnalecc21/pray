@@ -3,13 +3,14 @@ import * as Location from 'expo-location';
 import { api } from '../../../lib/api';
 
 type PermStatus = 'unknown' | 'granted' | 'denied';
+type SaveState  = 'idle' | 'saving' | 'saved' | 'error';
 
 export function useLocation() {
-  const [status,  setStatus]  = useState<PermStatus>('unknown');
-  const [loading, setLoading] = useState(false);
-  const [saved,   setSaved]   = useState(false);
+  const [status,    setStatus]    = useState<PermStatus>('unknown');
+  const [saveState, setSaveState] = useState<SaveState>('idle');
 
   const saveCurrentPosition = useCallback(async (): Promise<boolean> => {
+    setSaveState('saving');
     try {
       const { coords } = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
@@ -18,9 +19,10 @@ export function useLocation() {
         latitude:  coords.latitude,
         longitude: coords.longitude,
       });
-      setSaved(true);
+      setSaveState('saved');
       return true;
     } catch {
+      setSaveState('error');
       return false;
     }
   }, []);
@@ -31,7 +33,6 @@ export function useLocation() {
       const { status: perm } = await Location.getForegroundPermissionsAsync();
       if (perm === 'granted') {
         setStatus('granted');
-        // saved stays false until saveCurrentPosition succeeds
         saveCurrentPosition();
       } else if (perm === 'denied') {
         setStatus('denied');
@@ -41,25 +42,30 @@ export function useLocation() {
   }, [saveCurrentPosition]);
 
   const requestAndSave = useCallback(async (): Promise<boolean> => {
-    setLoading(true);
+    setSaveState('saving');
     try {
-      // If already granted, skip the dialog and just save
       if (status === 'granted') {
         return await saveCurrentPosition();
       }
       const { status: perm } = await Location.requestForegroundPermissionsAsync();
       if (perm !== 'granted') {
         setStatus('denied');
+        setSaveState('idle');
         return false;
       }
       setStatus('granted');
       return await saveCurrentPosition();
     } catch {
+      setSaveState('error');
       return false;
-    } finally {
-      setLoading(false);
     }
   }, [status, saveCurrentPosition]);
 
-  return { status, loading, saved, requestAndSave };
+  return {
+    status,
+    saveState,
+    loading: saveState === 'saving',
+    saved:   saveState === 'saved',
+    requestAndSave,
+  };
 }
