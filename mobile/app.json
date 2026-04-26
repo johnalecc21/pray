@@ -36,6 +36,14 @@
           "photosPermission": "La app necesita acceso a tus fotos para elegir tu foto de perfil.",
           "cameraPermission": "La app necesita acceso a tu cámara para tomar tu foto de perfil."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Charco usa tu ubicación para mostrarle a otros usuarios qué tan lejos estás de ellos.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
       ]
     ]
   }

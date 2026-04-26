@@ -148,8 +148,6 @@ function computeMatchScore(p: MatchParams): { score: number; factors: string[] }
     factors.push('edades compatibles');
   if (bioPts >= 3)
     factors.push('bios afines');
-  if (pronounPts > 0)
-    factors.push('mismos pronombres');
   if (p.distance_km != null && p.distance_km < 30)
     factors.push('cerca de ti');
 
@@ -220,6 +218,10 @@ router.post('/onboarding', async (req: AuthRequest, res) => {
   };
   if (avatar_url) metadata.avatar_url = avatar_url;
 
+  // Fetch current user to get name (may have been set at signup)
+  const { data: currentUser } = await supabase.auth.admin.getUserById(userId);
+  const existingName = (currentUser?.user?.user_metadata?.name as string | undefined) ?? null;
+
   const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
     user_metadata: metadata,
   });
@@ -233,7 +235,8 @@ router.post('/onboarding', async (req: AuthRequest, res) => {
     username:   cleanUsername,
     updated_at: new Date().toISOString(),
   };
-  if (avatar_url) profileUpdate.avatar_url = avatar_url;
+  if (existingName)  profileUpdate.name       = existingName;
+  if (avatar_url)    profileUpdate.avatar_url = avatar_url;
 
   const { error: profileError } = await supabase
     .from('profiles')

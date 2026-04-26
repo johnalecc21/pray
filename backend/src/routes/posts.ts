@@ -5,6 +5,34 @@ import { supabase } from '../lib/supabase';
 const router = Router();
 router.use(requireAuth);
 
+// Rellena authors nulos consultando auth.users (fallback cuando no hay fila en profiles)
+async function enrichAuthors(posts: any[]): Promise<any[]> {
+  const missing = [...new Set(
+    posts.filter(p => !p.author || (!p.author.name && !p.author.username))
+          .map(p => p.user_id as string),
+  )];
+  if (missing.length === 0) return posts;
+
+  const authMap = new Map<string, { id: string; name: string | null; username: string | null; avatar_url: string | null }>();
+  await Promise.all(missing.map(async (uid) => {
+    const { data } = await supabase.auth.admin.getUserById(uid);
+    if (!data?.user) return;
+    const meta = data.user.user_metadata ?? {};
+    authMap.set(uid, {
+      id:         uid,
+      name:       (meta.name       as string | null) ?? null,
+      username:   (meta.username   as string | null) ?? null,
+      avatar_url: (meta.avatar_url as string | null) ?? null,
+    });
+  }));
+
+  return posts.map(p => {
+    if (p.author && (p.author.name || p.author.username)) return p;
+    const fallback = authMap.get(p.user_id);
+    return { ...p, author: fallback ?? p.author };
+  });
+}
+
 function extractHashtags(content: string): string[] {
   const matches = content.match(/#[\wÀ-ž]+/g) ?? [];
   return [...new Set(matches.map(h => h.slice(1).toLowerCase()))];
@@ -131,13 +159,13 @@ router.get('/feed', async (req: AuthRequest, res) => {
     if (name) (tagsByPost[row.post_id] ??= []).push(name);
   }
 
-  res.json({
-    posts: posts.map(p => ({
-      ...p,
-      hashtags:       tagsByPost[p.id] ?? [],
-      is_liked_by_me: likedSet.has(p.id),
-    })),
-  });
+  const enriched = await enrichAuthors(posts.map(p => ({
+    ...p,
+    hashtags:       tagsByPost[p.id] ?? [],
+    is_liked_by_me: likedSet.has(p.id),
+  })));
+
+  res.json({ posts: enriched });
 });
 
 // GET /posts/trends — hashtags más populares
@@ -194,13 +222,13 @@ router.get('/by-user/:userId', async (req: AuthRequest, res) => {
     if (name) (tagsByPost[row.post_id] ??= []).push(name);
   }
 
-  res.json({
-    posts: posts.map(p => ({
-      ...p,
-      hashtags:       tagsByPost[p.id] ?? [],
-      is_liked_by_me: likedSet.has(p.id),
-    })),
-  });
+  const enriched = await enrichAuthors(posts.map(p => ({
+    ...p,
+    hashtags:       tagsByPost[p.id] ?? [],
+    is_liked_by_me: likedSet.has(p.id),
+  })));
+
+  res.json({ posts: enriched });
 });
 
 // GET /posts/liked-by-me — posts que el usuario actual ha likeado
@@ -241,13 +269,13 @@ router.get('/liked-by-me', async (req: AuthRequest, res) => {
     if (name) (tagsByPost[row.post_id] ??= []).push(name);
   }
 
-  res.json({
-    posts: posts.map(p => ({
-      ...p,
-      hashtags:       tagsByPost[p.id] ?? [],
-      is_liked_by_me: true,
-    })),
-  });
+  const enriched = await enrichAuthors(posts.map(p => ({
+    ...p,
+    hashtags:       tagsByPost[p.id] ?? [],
+    is_liked_by_me: true,
+  })));
+
+  res.json({ posts: enriched });
 });
 
 // GET /posts/user-replies — comentarios del usuario actual con contexto del post

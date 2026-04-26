@@ -34,7 +34,7 @@ function HashtagText({ content }: { content: string }) {
 }
 
 export default function PostCard({ post, onLike, onComment, onShare, isOwn, onDelete, onAuthorPress }: PostCardProps) {
-  const name     = post.author?.name ?? 'Usuario';
+  const name     = post.author?.name ?? post.author?.username ?? 'Usuario';
   const handle   = post.author?.username
     ? `@${post.author.username}`
     : `@${name.toLowerCase().replace(/[^a-z0-9]/gi, '')}`;

@@ -128,8 +128,8 @@ export default function FeedScreen() {
               onComment={() => setCommentPostId(item.id)}
               isOwn={item.user_id === user?.id}
               onDelete={() => handleDeletePost(item.id)}
-              onAuthorPress={item.user_id !== user?.id && item.author?.id
-                ? () => router.push(`/user/${item.author!.id}`)
+              onAuthorPress={item.user_id !== user?.id
+                ? () => router.push(`/user/${item.user_id}`)
                 : undefined}
             />
           )}

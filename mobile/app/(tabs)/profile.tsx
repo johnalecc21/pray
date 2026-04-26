@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../features/profile/hooks/useProfile';
+import { useLocation } from '../../features/profile/hooks/useLocation';
 import { usePosts } from '../../context/PostsContext';
 import { formatRelativeTime } from '../../features/feed/utils';
 import type { UserReply } from '../../features/feed/types';
@@ -111,6 +112,8 @@ export default function ProfileScreen() {
     userReplies, userRepliesLoading, userRepliesLoaded, fetchUserReplies,
     toggleLike, deletePost, incrementCommentCount,
   } = usePosts();
+
+  const { status: locStatus, loading: locLoading, saved: locSaved, requestAndSave } = useLocation();
 
   const [editing,       setEditing]       = useState(false);
   const [viewingPhoto,  setViewingPhoto]  = useState<string | null>(null);
@@ -368,6 +371,49 @@ export default function ProfileScreen() {
               ))}
             </View>
           </View>
+        )}
+
+        {/* Location banner — shown while permission is undetermined */}
+        {!locSaved && locStatus === 'unknown' && (
+          <TouchableOpacity
+            onPress={async () => {
+              const ok = await requestAndSave();
+              if (!ok) {
+                Alert.alert(
+                  'Permiso necesario',
+                  'Activa la ubicación en Configuración → Privacidad → Ubicación para mostrar tu distancia a otros usuarios.',
+                  [{ text: 'Entendido' }],
+                );
+              }
+            }}
+            disabled={locLoading}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              marginHorizontal: 16, marginTop: 16, marginBottom: 4,
+              paddingHorizontal: 14, paddingVertical: 12,
+              borderRadius: 14, borderWidth: 1,
+              backgroundColor: `${colors.pride.blue}10`,
+              borderColor: `${colors.pride.blue}30`,
+            }}
+          >
+            {locLoading ? (
+              <ActivityIndicator size="small" color={colors.pride.blue} />
+            ) : (
+              <Ionicons name="location-outline" size={18} color={colors.pride.blue} />
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.pride.blue }}>
+                Activar distancia
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, marginTop: 1 }}>
+                Muestra a otros usuarios qué tan cerca estás
+              </Text>
+            </View>
+            {!locLoading && (
+              <Ionicons name="chevron-forward" size={14} color={colors.mutedForeground} />
+            )}
+          </TouchableOpacity>
         )}
 
         {/* Tab bar */}

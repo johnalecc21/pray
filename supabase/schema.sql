@@ -301,3 +301,34 @@ create policy "Users can manage own user likes"
 create policy "Anyone can read user likes"
   on public.user_likes for select
   using (true);
+
+-- -----------------------------------------------
+-- MIGRACIÓN: sincronizar name en profiles existentes
+-- y permitir lectura de perfiles entre usuarios
+-- -----------------------------------------------
+
+-- Crea filas faltantes y sincroniza name para usuarios que ya existen
+insert into public.profiles (id, name, avatar_url)
+select
+  u.id,
+  u.raw_user_meta_data ->> 'name',
+  u.raw_user_meta_data ->> 'avatar_url'
+from auth.users u
+where not exists (select 1 from public.profiles p where p.id = u.id)
+on conflict (id) do nothing;
+
+-- Actualiza name en perfiles que lo tienen null pero auth.users sí lo tiene
+update public.profiles p
+set name = u.raw_user_meta_data ->> 'name'
+from auth.users u
+where p.id = u.id
+  and p.name is null
+  and u.raw_user_meta_data ->> 'name' is not null;
+
+-- Permite que cualquier usuario autenticado lea perfiles de otros usuarios
+-- (el backend usa service_role y ya bypasea RLS, pero es buena práctica)
+drop policy if exists "Authenticated users can read any profile" on public.profiles;
+create policy "Authenticated users can read any profile"
+  on public.profiles for select
+  to authenticated
+  using (true);
