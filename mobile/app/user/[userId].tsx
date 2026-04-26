@@ -203,6 +203,26 @@ export default function UserProfileScreen() {
             </View>
           </View>
 
+          {/* Match factors pills */}
+          {profile.match_factors.length > 0 && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16, marginTop: -4 }}>
+              {profile.match_factors.map(factor => (
+                <View
+                  key={factor}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    paddingHorizontal: 9, paddingVertical: 4,
+                    borderRadius: 999, backgroundColor: `${scoreColor}18`,
+                    borderWidth: 1, borderColor: `${scoreColor}35`,
+                  }}
+                >
+                  <Ionicons name="sparkles" size={10} color={scoreColor} />
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: scoreColor }}>{factor}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           {/* ── NAME & INFO ── */}
           <View style={{ marginBottom: 16, gap: 4 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -221,10 +241,13 @@ export default function UserProfileScreen() {
               <Text style={{ fontSize: 14, color: colors.mutedForeground }}>@{profile.username}</Text>
             ) : null}
 
-            {profile.location ? (
+            {(profile.location || profile.distance_km != null) ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
                 <Ionicons name="location-outline" size={13} color={colors.mutedForeground} />
-                <Text style={{ fontSize: 13, color: colors.mutedForeground }}>{profile.location}</Text>
+                <Text style={{ fontSize: 13, color: colors.mutedForeground }}>
+                  {[profile.location, profile.distance_km != null ? `${profile.distance_km} km` : null]
+                    .filter(Boolean).join(' · ')}
+                </Text>
               </View>
             ) : null}
 

@@ -274,3 +274,30 @@ create policy "Users can delete own post images"
 -- -----------------------------------------------
 alter table public.profiles add column if not exists username text unique;
 create index if not exists profiles_username_idx on public.profiles (username);
+
+-- -----------------------------------------------
+-- MIGRACIÓN: coordenadas y user_likes para Match IA
+-- -----------------------------------------------
+alter table public.profiles add column if not exists latitude  float8;
+alter table public.profiles add column if not exists longitude float8;
+
+create table if not exists public.user_likes (
+  liker_id   uuid not null references public.profiles(id) on delete cascade,
+  liked_id   uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz default now() not null,
+  primary key (liker_id, liked_id)
+);
+
+create index if not exists user_likes_liker_idx on public.user_likes (liker_id);
+create index if not exists user_likes_liked_idx on public.user_likes (liked_id);
+
+alter table public.user_likes enable row level security;
+
+create policy "Users can manage own user likes"
+  on public.user_likes for all
+  using (auth.uid() = liker_id)
+  with check (auth.uid() = liker_id);
+
+create policy "Anyone can read user likes"
+  on public.user_likes for select
+  using (true);

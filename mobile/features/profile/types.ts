@@ -33,6 +33,8 @@ export interface PublicProfile {
   common_interests: string[];
   common_moods:     string[];
   match_score:      number;
+  match_factors:    string[];
+  distance_km:      number | null;
   is_liked_by_me:   boolean;
 }
 
