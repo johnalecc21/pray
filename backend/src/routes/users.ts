@@ -495,12 +495,21 @@ router.post('/:userId/like', async (req: AuthRequest, res) => {
     const { error } = await supabase
       .from('user_likes').delete().eq('liker_id', likerId).eq('liked_id', likedId);
     if (error) { res.status(500).json({ error: error.message }); return; }
-    res.json({ liked: false });
+    res.json({ liked: false, matched: false });
   } else {
     const { error } = await supabase
       .from('user_likes').insert({ liker_id: likerId, liked_id: likedId });
     if (error) { res.status(500).json({ error: error.message }); return; }
-    res.json({ liked: true });
+
+    // Check for mutual like (match)
+    const { data: reverseRow } = await supabase
+      .from('user_likes')
+      .select('liked_id')
+      .eq('liker_id', likedId)
+      .eq('liked_id', likerId)
+      .maybeSingle();
+
+    res.json({ liked: true, matched: !!reverseRow });
   }
 });
 
