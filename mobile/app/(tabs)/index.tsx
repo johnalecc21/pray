@@ -44,7 +44,7 @@ export default function FeedScreen() {
   const {
     activeTab, setActiveTab,
     posts, loading, refreshing,
-    toggleLike, addPost, removePost, incrementCommentCount, refresh,
+    toggleLike, addPost, deletePost, incrementCommentCount, refresh,
   } = useFeed();
 
   const [showCreate,    setShowCreate]    = useState(false);
@@ -85,12 +85,11 @@ export default function FeedScreen() {
 
   const handleDeletePost = useCallback(async (postId: string) => {
     try {
-      await postsApi.deletePost(postId);
-      removePost(postId);
+      await deletePost(postId);
     } catch {
       Alert.alert('Error', 'No se pudo eliminar el post. Intenta de nuevo.');
     }
-  }, [removePost]);
+  }, [deletePost]);
 
   const renderHeader = useCallback(
     () => (

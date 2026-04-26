@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, Image, TouchableOpacity,
   ActivityIndicator, Alert, Dimensions,
@@ -10,14 +10,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../features/profile/hooks/useProfile';
-import { postsApi } from '../../features/feed/postsApi';
+import { usePosts } from '../../context/PostsContext';
 import { formatRelativeTime } from '../../features/feed/utils';
-import type { Post, UserReply } from '../../features/feed/types';
-import EditProfileModal  from '../../components/profile/EditProfileModal';
-import PhotoViewer       from '../../components/profile/PhotoViewer';
-import PostCard          from '../../components/feed/PostCard';
-import CommentsModal     from '../../components/feed/CommentsModal';
-import GradientText      from '../../components/ui/GradientText';
+import type { UserReply } from '../../features/feed/types';
+import EditProfileModal from '../../components/profile/EditProfileModal';
+import PhotoViewer      from '../../components/profile/PhotoViewer';
+import PostCard         from '../../components/feed/PostCard';
+import CommentsModal    from '../../components/feed/CommentsModal';
+import GradientText     from '../../components/ui/GradientText';
 import { colors, prideGradient } from '../../lib/theme';
 import { identityOptions, interestOptions, moodOptions } from '../../features/onboarding/data';
 
@@ -77,26 +77,10 @@ function EmptyTabState({ message }: { message: string }) {
 function ReplyCard({ reply }: { reply: UserReply }) {
   const postAuthor = reply.post?.author;
   const time       = formatRelativeTime(reply.created_at);
-
   return (
-    <View
-      style={{
-        backgroundColor: colors.card,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: colors.border,
-        marginBottom: 10,
-        padding: 14,
-      }}
-    >
+    <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 10, padding: 14 }}>
       {reply.post && (
-        <View
-          style={{
-            flexDirection: 'row', alignItems: 'center', gap: 6,
-            marginBottom: 10, paddingBottom: 10,
-            borderBottomWidth: 1, borderBottomColor: colors.border,
-          }}
-        >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Ionicons name="return-down-forward-outline" size={12} color={colors.mutedForeground} />
           <Text style={{ fontSize: 11, color: colors.mutedForeground, flex: 1 }} numberOfLines={1}>
             En respuesta a{' '}
@@ -108,12 +92,8 @@ function ReplyCard({ reply }: { reply: UserReply }) {
           </Text>
         </View>
       )}
-      <Text style={{ fontSize: 14, color: colors.foreground, lineHeight: 20 }}>
-        {reply.content}
-      </Text>
-      <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 6 }}>
-        {time}
-      </Text>
+      <Text style={{ fontSize: 14, color: colors.foreground, lineHeight: 20 }}>{reply.content}</Text>
+      <Text style={{ fontSize: 11, color: colors.mutedForeground, marginTop: 6 }}>{time}</Text>
     </View>
   );
 }
@@ -125,114 +105,44 @@ export default function ProfileScreen() {
     changeAvatar, changeCover, removeAvatar, removeCover,
     addPhoto, removePhoto,
   } = useProfile();
+  const {
+    userPosts, userPostsLoading, userPostsLoaded, fetchUserPosts,
+    likedPosts, likedPostsLoading, likedPostsLoaded, fetchLikedPosts,
+    userReplies, userRepliesLoading, userRepliesLoaded, fetchUserReplies,
+    toggleLike, deletePost, incrementCommentCount,
+  } = usePosts();
 
-  const [editing,      setEditing]      = useState(false);
-  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
-  const [profileTab,   setProfileTab]   = useState<ProfileTab>('publicaciones');
-  const [userPosts,    setUserPosts]    = useState<Post[]>([]);
-  const [userReplies,  setUserReplies]  = useState<UserReply[]>([]);
-  const [likedPosts,   setLikedPosts]   = useState<Post[]>([]);
-  const [tabLoading,   setTabLoading]   = useState(false);
+  const [editing,       setEditing]       = useState(false);
+  const [viewingPhoto,  setViewingPhoto]  = useState<string | null>(null);
+  const [profileTab,    setProfileTab]    = useState<ProfileTab>('publicaciones');
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
 
-  const loadedTabsRef = useRef<Set<ProfileTab>>(new Set());
-
-  const moodColorMap     = Object.fromEntries(moodOptions.map((m) => [m.label, m.color]));
-  const moodIconMap      = Object.fromEntries(moodOptions.filter((m) => m.icon).map((m) => [m.label, m.icon!]));
-  const interestIconMap  = Object.fromEntries(
+  const moodColorMap    = Object.fromEntries(moodOptions.map((m) => [m.label, m.color]));
+  const moodIconMap     = Object.fromEntries(moodOptions.filter((m) => m.icon).map((m) => [m.label, m.icon!]));
+  const interestIconMap = Object.fromEntries(
     interestOptions.map((i) => [i.label, i.icon as React.ComponentProps<typeof Ionicons>['name']]),
   );
   const identityColorMap = Object.fromEntries(identityOptions.map((i) => [i.label, i.color]));
 
-  const fetchUserPosts = useCallback(async () => {
-    if (!profile?.id) return;
-    setTabLoading(true);
-    try {
-      const { posts } = await postsApi.getPostsByUser(profile.id);
-      setUserPosts(posts);
-    } catch (err) {
-      console.error('fetchUserPosts:', err);
-    } finally {
-      setTabLoading(false);
-    }
-  }, [profile?.id]);
-
-  const fetchUserReplies = useCallback(async () => {
-    setTabLoading(true);
-    try {
-      const { replies } = await postsApi.getUserReplies();
-      setUserReplies(replies);
-    } catch (err) {
-      console.error('fetchUserReplies:', err);
-    } finally {
-      setTabLoading(false);
-    }
-  }, []);
-
-  const fetchLikedPosts = useCallback(async () => {
-    setTabLoading(true);
-    try {
-      const { posts } = await postsApi.getLikedPosts();
-      setLikedPosts(posts);
-    } catch (err) {
-      console.error('fetchLikedPosts:', err);
-    } finally {
-      setTabLoading(false);
-    }
-  }, []);
-
+  // Lazy-load each tab on first visit
   useEffect(() => {
     if (!profile?.id) return;
-    if (profileTab === 'publicaciones' && !loadedTabsRef.current.has('publicaciones')) {
-      loadedTabsRef.current.add('publicaciones');
-      fetchUserPosts();
-    } else if (profileTab === 'respuestas' && !loadedTabsRef.current.has('respuestas')) {
-      loadedTabsRef.current.add('respuestas');
+    if (profileTab === 'publicaciones' && !userPostsLoaded && !userPostsLoading) {
+      fetchUserPosts(profile.id);
+    } else if (profileTab === 'respuestas' && !userRepliesLoaded && !userRepliesLoading) {
       fetchUserReplies();
-    } else if (profileTab === 'me_gusta' && !loadedTabsRef.current.has('me_gusta')) {
-      loadedTabsRef.current.add('me_gusta');
+    } else if (profileTab === 'me_gusta' && !likedPostsLoaded && !likedPostsLoading) {
       fetchLikedPosts();
     }
-  }, [profileTab, profile?.id, fetchUserPosts, fetchUserReplies, fetchLikedPosts]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileTab, profile?.id]);
 
-  function toggleLikeInList(
-    postId: string,
-    setter: React.Dispatch<React.SetStateAction<Post[]>>,
-  ) {
-    setter(prev => prev.map(p =>
-      p.id !== postId ? p : {
-        ...p,
-        is_liked_by_me: !p.is_liked_by_me,
-        likes_count: p.is_liked_by_me ? p.likes_count - 1 : p.likes_count + 1,
-      }
-    ));
-    postsApi.toggleLike(postId).catch(() => {
-      setter(prev => prev.map(p =>
-        p.id !== postId ? p : {
-          ...p,
-          is_liked_by_me: !p.is_liked_by_me,
-          likes_count: p.is_liked_by_me ? p.likes_count - 1 : p.likes_count + 1,
-        }
-      ));
-    });
-  }
-
-  function handleDeletePost(postId: string) {
-    Alert.alert('Eliminar post', '¿Quieres eliminar esta publicación?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await postsApi.deletePost(postId);
-            setUserPosts(prev => prev.filter(p => p.id !== postId));
-          } catch {
-            Alert.alert('Error', 'No se pudo eliminar el post. Intenta de nuevo.');
-          }
-        },
-      },
-    ]);
+  async function handleDeletePost(postId: string) {
+    try {
+      await deletePost(postId);
+    } catch {
+      Alert.alert('Error', 'No se pudo eliminar el post. Intenta de nuevo.');
+    }
   }
 
   function handleAvatarPress() {
@@ -254,8 +164,7 @@ export default function ProfileScreen() {
         text: 'Eliminar foto',
         style: 'destructive',
         onPress: () => Alert.alert(
-          'Eliminar foto de perfil',
-          '¿Seguro que quieres eliminar tu foto de perfil?',
+          'Eliminar foto de perfil', '¿Seguro que quieres eliminar tu foto de perfil?',
           [
             { text: 'Cancelar', style: 'cancel' },
             { text: 'Eliminar', style: 'destructive', onPress: () => removeAvatar() },
@@ -289,8 +198,7 @@ export default function ProfileScreen() {
         text: 'Eliminar portada',
         style: 'destructive',
         onPress: () => Alert.alert(
-          'Eliminar portada',
-          '¿Seguro que quieres eliminar la foto de portada?',
+          'Eliminar portada', '¿Seguro que quieres eliminar la foto de portada?',
           [
             { text: 'Cancelar', style: 'cancel' },
             { text: 'Eliminar', style: 'destructive', onPress: () => removeCover() },
@@ -382,11 +290,7 @@ export default function ProfileScreen() {
           <View>
             <TouchableOpacity onPress={handleAvatarPress} activeOpacity={0.85}>
               {profile.avatar_url ? (
-                <Image
-                  source={{ uri: profile.avatar_url }}
-                  style={{ width: 88, height: 88, borderRadius: 18, borderWidth: 3, borderColor: colors.background }}
-                  resizeMode="cover"
-                />
+                <Image source={{ uri: profile.avatar_url }} style={{ width: 88, height: 88, borderRadius: 18, borderWidth: 3, borderColor: colors.background }} resizeMode="cover" />
               ) : (
                 <LinearGradient
                   colors={[colors.accent, colors.primary]}
@@ -409,9 +313,7 @@ export default function ProfileScreen() {
         {/* Name + identity */}
         <View className="px-5 mt-3 gap-1">
           <View className="flex-row items-center gap-2">
-            <Text className="text-2xl font-extrabold text-foreground">
-              {profile.name ?? 'Sin nombre'}
-            </Text>
+            <Text className="text-2xl font-extrabold text-foreground">{profile.name ?? 'Sin nombre'}</Text>
             {profile.age && (
               <View style={{ backgroundColor: `${colors.primary}20`, borderRadius: 100, paddingHorizontal: 8, paddingVertical: 2 }}>
                 <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>{profile.age}</Text>
@@ -419,14 +321,10 @@ export default function ProfileScreen() {
             )}
           </View>
           {profile.username && (
-            <Text style={{ fontSize: 14, color: colors.mutedForeground, marginTop: 1 }}>
-              @{profile.username}
-            </Text>
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, marginTop: 1 }}>@{profile.username}</Text>
           )}
           <View className="flex-row flex-wrap gap-2 items-center mt-0.5">
-            {profile.pronouns && (
-              <Text className="text-sm text-muted-foreground">{profile.pronouns}</Text>
-            )}
+            {profile.pronouns && <Text className="text-sm text-muted-foreground">{profile.pronouns}</Text>}
             {profile.identity.map((id) => (
               <View key={id} className="px-2 py-0.5 rounded-full" style={{ backgroundColor: `${identityColorMap[id] ?? colors.primary}25` }}>
                 <Text className="text-xs font-semibold" style={{ color: identityColorMap[id] ?? colors.primary }}>{id}</Text>
@@ -439,23 +337,17 @@ export default function ProfileScreen() {
               <Text className="text-sm text-muted-foreground">{profile.location}</Text>
             </View>
           ) : null}
-          {profile.bio ? (
-            <Text className="mt-2 text-sm text-muted-foreground leading-relaxed">{profile.bio}</Text>
-          ) : null}
+          {profile.bio ? <Text className="mt-2 text-sm text-muted-foreground leading-relaxed">{profile.bio}</Text> : null}
         </View>
 
         {/* Mood */}
         {profile.moods.length > 0 && (
           <View className="px-5 mt-5">
-            <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-              Mood actual
-            </Text>
+            <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Mood actual</Text>
             <View className="flex-row flex-wrap gap-2">
               {profile.moods.map((mood) => (
                 <View key={mood} className="flex-row items-center gap-1 px-3 py-1.5 rounded-full" style={{ backgroundColor: moodColorMap[mood] ?? colors.primary }}>
-                  {moodIconMap[mood] && (
-                    <Ionicons name={moodIconMap[mood] as any} size={12} color="#fff" />
-                  )}
+                  {moodIconMap[mood] && <Ionicons name={moodIconMap[mood] as any} size={12} color="#fff" />}
                   <Text className="text-xs font-bold text-white">{mood}</Text>
                 </View>
               ))}
@@ -466,15 +358,11 @@ export default function ProfileScreen() {
         {/* Interests */}
         {profile.interests.length > 0 && (
           <View className="px-5 mt-5">
-            <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-              Intereses
-            </Text>
+            <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Intereses</Text>
             <View className="flex-row flex-wrap gap-2">
               {profile.interests.map((interest) => (
                 <View key={interest} className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-xl" style={{ backgroundColor: colors.secondary }}>
-                  {interestIconMap[interest] && (
-                    <Ionicons name={interestIconMap[interest]} size={13} color={colors.primary} />
-                  )}
+                  {interestIconMap[interest] && <Ionicons name={interestIconMap[interest]} size={13} color={colors.primary} />}
                   <Text className="text-xs font-medium text-foreground">{interest}</Text>
                 </View>
               ))}
@@ -483,14 +371,7 @@ export default function ProfileScreen() {
         )}
 
         {/* Tab bar */}
-        <View
-          style={{
-            flexDirection: 'row',
-            marginTop: 20,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
-          }}
-        >
+        <View style={{ flexDirection: 'row', marginTop: 20, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           {PROFILE_TABS.map(({ key, label }) => {
             const active = profileTab === key;
             return (
@@ -500,25 +381,11 @@ export default function ProfileScreen() {
                 activeOpacity={0.7}
                 style={{ flex: 1, alignItems: 'center', paddingVertical: 12 }}
               >
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: active ? '700' : '500',
-                    color: active ? colors.foreground : colors.mutedForeground,
-                  }}
-                  numberOfLines={1}
-                >
+                <Text style={{ fontSize: 12, fontWeight: active ? '700' : '500', color: active ? colors.foreground : colors.mutedForeground }} numberOfLines={1}>
                   {label}
                 </Text>
                 {active && (
-                  <View
-                    style={{
-                      position: 'absolute', bottom: 0,
-                      left: '20%', right: '20%',
-                      height: 2, borderRadius: 1,
-                      backgroundColor: colors.primary,
-                    }}
-                  />
+                  <View style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 2, borderRadius: 1, backgroundColor: colors.primary }} />
                 )}
               </TouchableOpacity>
             );
@@ -527,9 +394,10 @@ export default function ProfileScreen() {
 
         {/* Tab content */}
         <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+
           {/* Publicaciones */}
           {profileTab === 'publicaciones' && (
-            tabLoading ? (
+            userPostsLoading ? (
               <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
             ) : userPosts.length === 0 ? (
               <EmptyTabState message="Aún no has publicado nada" />
@@ -539,7 +407,7 @@ export default function ProfileScreen() {
                   key={post.id}
                   post={post}
                   isOwn={true}
-                  onLike={() => toggleLikeInList(post.id, setUserPosts)}
+                  onLike={() => toggleLike(post.id)}
                   onComment={() => setCommentPostId(post.id)}
                   onDelete={() => handleDeletePost(post.id)}
                 />
@@ -549,14 +417,12 @@ export default function ProfileScreen() {
 
           {/* Respuestas */}
           {profileTab === 'respuestas' && (
-            tabLoading ? (
+            userRepliesLoading ? (
               <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
             ) : userReplies.length === 0 ? (
               <EmptyTabState message="Aún no has comentado en ningún post" />
             ) : (
-              userReplies.map(reply => (
-                <ReplyCard key={reply.id} reply={reply} />
-              ))
+              userReplies.map(reply => <ReplyCard key={reply.id} reply={reply} />)
             )
           )}
 
@@ -564,15 +430,12 @@ export default function ProfileScreen() {
           {profileTab === 'fotos' && (
             <View>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Fotos
-                </Text>
+                <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Fotos</Text>
                 <TouchableOpacity onPress={handleAddPhoto} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} disabled={saving}>
                   <Ionicons name="flash" size={11} color={colors.primary} />
                   <Text style={{ fontSize: 12, fontWeight: '600', color: colors.primary }}>Agregar</Text>
                 </TouchableOpacity>
               </View>
-
               <View className="flex-row flex-wrap gap-1">
                 {profile.photos.map((url) => (
                   <View key={url} style={{ width: PHOTO_SIZE, height: PHOTO_SIZE }}>
@@ -592,7 +455,6 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
                   </View>
                 ))}
-
                 <TouchableOpacity
                   onPress={handleAddPhoto}
                   disabled={saving}
@@ -601,16 +463,13 @@ export default function ProfileScreen() {
                   <Ionicons name="add" size={24} color={colors.mutedForeground} />
                 </TouchableOpacity>
               </View>
-
-              {profile.photos.length === 0 && (
-                <EmptyTabState message="Agrega tu primera foto" />
-              )}
+              {profile.photos.length === 0 && <EmptyTabState message="Agrega tu primera foto" />}
             </View>
           )}
 
           {/* Me gusta */}
           {profileTab === 'me_gusta' && (
-            tabLoading ? (
+            likedPostsLoading ? (
               <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
             ) : likedPosts.length === 0 ? (
               <EmptyTabState message="Aún no has dado me gusta a ningún post" />
@@ -620,51 +479,28 @@ export default function ProfileScreen() {
                   key={post.id}
                   post={post}
                   isOwn={post.user_id === profile.id}
-                  onLike={() => toggleLikeInList(post.id, setLikedPosts)}
+                  onLike={() => toggleLike(post.id)}
                   onComment={() => setCommentPostId(post.id)}
-                  onDelete={post.user_id === profile.id ? () => {
-                    Alert.alert('Eliminar post', '¿Quieres eliminar esta publicación?', [
-                      { text: 'Cancelar', style: 'cancel' },
-                      {
-                        text: 'Eliminar',
-                        style: 'destructive',
-                        onPress: async () => {
-                          try {
-                            await postsApi.deletePost(post.id);
-                            setLikedPosts(prev => prev.filter(p => p.id !== post.id));
-                          } catch {
-                            Alert.alert('Error', 'No se pudo eliminar el post.');
-                          }
-                        },
-                      },
-                    ]);
-                  } : undefined}
+                  onDelete={post.user_id === profile.id ? () => handleDeletePost(post.id) : undefined}
                 />
               ))
             )
           )}
+
         </View>
       </ScrollView>
 
       {editing && (
-        <EditProfileModal
-          profile={profile}
-          saving={saving}
-          onSave={update}
-          onClose={() => setEditing(false)}
-        />
+        <EditProfileModal profile={profile} saving={saving} onSave={update} onClose={() => setEditing(false)} />
       )}
 
-      <PhotoViewer
-        uri={viewingPhoto}
-        onClose={() => setViewingPhoto(null)}
-      />
+      <PhotoViewer uri={viewingPhoto} onClose={() => setViewingPhoto(null)} />
 
       <CommentsModal
         visible={commentPostId !== null}
         postId={commentPostId}
         onClose={() => setCommentPostId(null)}
-        onCommentAdded={() => {}}
+        onCommentAdded={() => { if (commentPostId) incrementCommentCount(commentPostId); }}
       />
     </SafeAreaView>
   );

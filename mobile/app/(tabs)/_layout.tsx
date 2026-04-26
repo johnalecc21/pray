@@ -1,8 +1,10 @@
 import { Tabs } from 'expo-router';
 import BottomTabBar from '../../components/navigation/BottomTabBar';
+import { PostsProvider } from '../../context/PostsContext';
 
 export default function TabsLayout() {
   return (
+    <PostsProvider>
     <Tabs
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
@@ -13,5 +15,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="chat"    options={{ title: 'Chat' }} />
       <Tabs.Screen name="profile" options={{ title: 'Yo' }} />
     </Tabs>
+    </PostsProvider>
   );
 }
