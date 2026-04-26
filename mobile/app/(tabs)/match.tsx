@@ -67,6 +67,20 @@ export default function MatchScreen() {
     if (currentCandidate) swipePass(currentCandidate);
   }, [currentCandidate, swipePass]);
 
+  // Full-screen match celebration — same pattern as web reference
+  if (matchedUser) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <MatchSuccessModal
+          matched={matchedUser}
+          myName={profile?.name ?? user?.name ?? null}
+          myAvatarUrl={profile?.avatar_url ?? null}
+          onDismiss={() => { dismissMatch(); refetchMatches(); }}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
 
@@ -191,13 +205,6 @@ export default function MatchScreen() {
         />
       )}
 
-      <MatchSuccessModal
-        visible={matchedUser != null}
-        matched={matchedUser}
-        myName={profile?.name ?? user?.name ?? null}
-        myAvatarUrl={profile?.avatar_url ?? null}
-        onDismiss={dismissMatch}
-      />
     </SafeAreaView>
   );
 }

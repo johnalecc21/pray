@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Modal, View, Text, TouchableOpacity, StyleSheet, Image, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, Image, ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +12,6 @@ import GradientText from '../../../components/ui/GradientText';
 import type { MatchCandidate } from '../types';
 
 interface Props {
-  visible:     boolean;
   matched:     MatchCandidate | null;
   myName:      string | null;
   myAvatarUrl: string | null;
@@ -53,7 +52,7 @@ function Avatar({ uri, name, gradient }: { uri: string | null; name: string | nu
   );
 }
 
-export function MatchSuccessModal({ visible, matched, myName, myAvatarUrl, onDismiss }: Props) {
+export function MatchSuccessModal({ matched, myName, myAvatarUrl, onDismiss }: Props) {
   if (!matched) return null;
 
   const theirGradient  = userGradient(matched.id);
@@ -62,8 +61,7 @@ export function MatchSuccessModal({ visible, matched, myName, myAvatarUrl, onDis
   const hint           = icebreaker(matched.name, matched.common_interests);
 
   return (
-    <Modal visible={visible} animationType="fade" statusBarTranslucent onRequestClose={onDismiss}>
-      <View style={styles.container}>
+    <View style={styles.container}>
         {/* Glow */}
         <LinearGradient
           colors={[`${colors.pride.pink}20`, 'transparent']}
@@ -175,7 +173,6 @@ export function MatchSuccessModal({ visible, matched, myName, myAvatarUrl, onDis
           </TouchableOpacity>
         </ScrollView>
       </View>
-    </Modal>
   );
 }
 

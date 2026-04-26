@@ -42,24 +42,25 @@ function quickScore(
 router.get('/candidates', async (req: AuthRequest, res) => {
   const userId = req.userId!;
 
+  // Fetch in parallel — match_passes might not exist yet, handle gracefully
   const [
     { data: myData },
     { data: likedRows },
     { data: passedRows },
-    { data: allProfiles },
+    listResult,
   ] = await Promise.all([
     supabase.auth.admin.getUserById(userId),
     supabase.from('user_likes').select('liked_id').eq('liker_id', userId),
     supabase.from('match_passes').select('passed_id').eq('passer_id', userId),
-    supabase.from('profiles').select('id, username, name, avatar_url, latitude, longitude'),
+    supabase.auth.admin.listUsers({ perPage: 500 }),
   ]);
+  const allAuthUsers = listResult.data?.users ?? [];
 
   if (!myData?.user) { res.status(404).json({ error: 'User not found' }); return; }
 
-  const myMeta  = myData.user.user_metadata ?? {};
-  const myRow   = (allProfiles ?? []).find((p: any) => p.id === userId);
-  const myLat   = myRow?.latitude  ?? (myMeta.latitude  as number | undefined) ?? null;
-  const myLon   = myRow?.longitude ?? (myMeta.longitude as number | undefined) ?? null;
+  const myMeta = myData.user.user_metadata ?? {};
+  const myLat  = (myMeta.latitude  as number | undefined) ?? null;
+  const myLon  = (myMeta.longitude as number | undefined) ?? null;
 
   const excluded = new Set<string>([
     userId,
@@ -67,19 +68,31 @@ router.get('/candidates', async (req: AuthRequest, res) => {
     ...(passedRows ?? []).map((r: any) => r.passed_id as string),
   ]);
 
-  const eligible = (allProfiles ?? []).filter((p: any) => !excluded.has(p.id) && p.username);
+  // Filter to onboarded users only (have username in metadata)
+  const eligible = allAuthUsers.filter(u => {
+    if (excluded.has(u.id)) return false;
+    const meta = u.user_metadata ?? {};
+    return !!(meta.username);
+  });
+
   if (!eligible.length) { res.json({ candidates: [] }); return; }
 
-  const { data: { users: allAuthUsers } } = await supabase.auth.admin.listUsers({ perPage: 500 });
-  const authMap = new Map(allAuthUsers.map(u => [u.id, (u.user_metadata ?? {}) as Record<string, unknown>]));
+  // Optionally enrich with profiles table (safe columns only — no lat/lon)
+  const { data: profileRows } = await supabase
+    .from('profiles')
+    .select('id, username, name, avatar_url')
+    .in('id', eligible.map(u => u.id));
+  const profileMap = new Map((profileRows ?? []).map((p: any) => [p.id, p]));
 
-  const candidates = eligible.map((p: any) => {
-    const theirMeta      = authMap.get(p.id) ?? {};
-    const theirLat       = p.latitude  ?? (theirMeta.latitude  as number | undefined) ?? null;
-    const theirLon       = p.longitude ?? (theirMeta.longitude as number | undefined) ?? null;
-    const theirInterests = (theirMeta.interests as string[] | undefined) ?? [];
+  const candidates = eligible.map(u => {
+    const meta       = (u.user_metadata ?? {}) as Record<string, unknown>;
+    const prof       = profileMap.get(u.id);
+    const theirLat   = (meta.latitude  as number | undefined) ?? null;
+    const theirLon   = (meta.longitude as number | undefined) ?? null;
+
+    const theirInterests = (meta.interests as string[] | undefined) ?? [];
     const myInterests    = (myMeta.interests    as string[] | undefined) ?? [];
-    const theirMoods     = (theirMeta.moods     as string[] | undefined) ?? [];
+    const theirMoods     = (meta.moods     as string[] | undefined) ?? [];
     const myMoods        = (myMeta.moods        as string[] | undefined) ?? [];
 
     let distance_km: number | null = null;
@@ -87,7 +100,7 @@ router.get('/candidates', async (req: AuthRequest, res) => {
       distance_km = parseFloat(haversineKm(myLat, myLon, theirLat, theirLon).toFixed(3));
     }
 
-    const match_score      = quickScore(myMeta as Record<string, unknown>, theirMeta, distance_km);
+    const match_score      = quickScore(myMeta as Record<string, unknown>, meta, distance_km);
     const common_interests = theirInterests.filter(i => myInterests.includes(i));
     const common_moods     = theirMoods.filter(m => myMoods.includes(m));
     const match_factors: string[] = [];
@@ -96,18 +109,18 @@ router.get('/candidates', async (req: AuthRequest, res) => {
     if (distance_km != null && distance_km < 30) match_factors.push('cerca de ti');
 
     return {
-      id:               p.id as string,
-      name:             (p.name ?? theirMeta.name ?? null)                as string | null,
-      username:         p.username                                         as string,
-      avatar_url:       (p.avatar_url ?? theirMeta.avatar_url ?? null)    as string | null,
-      age:              (theirMeta.age      as number | null) ?? null,
-      bio:              (theirMeta.bio      as string | null) ?? null,
-      location:         (theirMeta.location as string | null) ?? null,
-      pronouns:         (theirMeta.pronouns as string | null) ?? null,
-      identity:         (theirMeta.identity  as string[]) ?? [],
+      id:               u.id,
+      name:             (prof?.name       ?? meta.name       ?? null) as string | null,
+      username:         (prof?.username   ?? meta.username   ?? null) as string | null,
+      avatar_url:       (prof?.avatar_url ?? meta.avatar_url ?? null) as string | null,
+      age:              (meta.age         as number | null) ?? null,
+      bio:              (meta.bio         as string | null) ?? null,
+      location:         (meta.location    as string | null) ?? null,
+      pronouns:         (meta.pronouns    as string | null) ?? null,
+      identity:         (meta.identity    as string[]) ?? [],
       interests:        theirInterests,
       moods:            theirMoods,
-      photos:           (theirMeta.photos    as string[]) ?? [],
+      photos:           (meta.photos      as string[]) ?? [],
       match_score,
       match_factors,
       distance_km,
@@ -146,23 +159,26 @@ router.post('/pass/:userId', async (req: AuthRequest, res) => {
 router.get('/matches', async (req: AuthRequest, res) => {
   const userId = req.userId!;
 
-  const { data: iLiked } = await supabase
+  try {
+  const { data: iLiked, error: iLikedError } = await supabase
     .from('user_likes').select('liked_id, created_at').eq('liker_id', userId);
 
+  if (iLikedError) { console.error('[matches] iLiked error:', iLikedError); res.status(500).json({ error: iLikedError.message }); return; }
   if (!iLiked?.length) { res.json({ matches: [] }); return; }
 
   const iLikedIds = iLiked.map((r: any) => r.liked_id as string);
 
-  const { data: theyLiked } = await supabase
+  const { data: theyLiked, error: theyLikedError } = await supabase
     .from('user_likes').select('liker_id').eq('liked_id', userId).in('liker_id', iLikedIds);
 
+  if (theyLikedError) { console.error('[matches] theyLiked error:', theyLikedError); res.status(500).json({ error: theyLikedError.message }); return; }
   if (!theyLiked?.length) { res.json({ matches: [] }); return; }
 
   const mutualIds = theyLiked.map((r: any) => r.liker_id as string);
 
   const [
     { data: profiles },
-    { data: { users: authUsers } },
+    listResult,
     { data: myRow },
     { data: myData },
   ] = await Promise.all([
@@ -171,6 +187,7 @@ router.get('/matches', async (req: AuthRequest, res) => {
     supabase.from('profiles').select('latitude, longitude').eq('id', userId).maybeSingle(),
     supabase.auth.admin.getUserById(userId),
   ]);
+  const authUsers = listResult.data?.users ?? [];
 
   const myMeta = myData?.user?.user_metadata ?? {};
   const myLat  = myRow?.latitude  ?? (myMeta.latitude  as number | undefined) ?? null;
@@ -203,6 +220,10 @@ router.get('/matches', async (req: AuthRequest, res) => {
 
   matches.sort((a, b) => new Date(b.matched_at).getTime() - new Date(a.matched_at).getTime());
   res.json({ matches });
+  } catch (err: any) {
+    console.error('[matches] unexpected error:', err);
+    res.status(500).json({ error: err?.message ?? 'Internal error' });
+  }
 });
 
 export default router;

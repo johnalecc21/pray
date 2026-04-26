@@ -25,9 +25,11 @@ export function useMatchCandidates(): UseMatchCandidatesResult {
     setLoading(true);
     try {
       const { candidates: data } = await api.get<{ candidates: MatchCandidate[] }>('/match/candidates');
+      console.log('[candidates] loaded:', data.length);
       setCandidates(data);
       setCurrentIndex(0);
-    } catch {
+    } catch (err) {
+      console.error('[candidates] error:', err);
       setCandidates([]);
     } finally {
       setLoading(false);
@@ -44,9 +46,10 @@ export function useMatchCandidates(): UseMatchCandidatesResult {
       const result = await api.post<{ liked: boolean; matched: boolean }>(
         `/users/${candidate.id}/like`, {},
       );
+      console.log('[swipeLike] result:', result);
       if (result.matched) setMatchedUser(candidate);
-    } catch {
-      // silent — swipe already happened visually
+    } catch (err) {
+      console.error('[swipeLike] error:', err);
     } finally {
       swipingRef.current = false;
     }

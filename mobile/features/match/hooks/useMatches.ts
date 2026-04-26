@@ -10,8 +10,10 @@ export function useMatches() {
     setLoading(true);
     try {
       const { matches: data } = await api.get<{ matches: MatchUser[] }>('/match/matches');
+      console.log('[matches] loaded:', data.length, data);
       setMatches(data);
-    } catch {
+    } catch (err) {
+      console.error('[matches] error:', err);
       setMatches([]);
     } finally {
       setLoading(false);
