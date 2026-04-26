@@ -214,4 +214,111 @@ router.put('/profile', async (req: AuthRequest, res) => {
   res.json({ ok: true });
 });
 
+// GET /users/:userId — perfil público de otro usuario
+router.get('/:userId', async (req: AuthRequest, res) => {
+  const { userId }    = req.params;
+  const requesterId   = req.userId!;
+
+  if (userId === requesterId) {
+    res.status(400).json({ error: 'Usa /users/me para tu propio perfil' });
+    return;
+  }
+
+  const [{ data: targetData }, { data: myData }] = await Promise.all([
+    supabase.auth.admin.getUserById(userId),
+    supabase.auth.admin.getUserById(requesterId),
+  ]);
+
+  if (!targetData?.user) {
+    res.status(404).json({ error: 'Usuario no encontrado' });
+    return;
+  }
+
+  const meta   = targetData.user.user_metadata ?? {};
+  const myMeta = myData?.user?.user_metadata   ?? {};
+
+  const { data: profileRow } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', userId)
+    .maybeSingle();
+
+  const theirInterests = (meta.interests   as string[]) ?? [];
+  const theirMoods     = (meta.moods       as string[]) ?? [];
+  const myInterests    = (myMeta.interests as string[]) ?? [];
+  const myMoods        = (myMeta.moods     as string[]) ?? [];
+
+  const commonInterests = theirInterests.filter(i => myInterests.includes(i));
+  const commonMoods     = theirMoods.filter(m => myMoods.includes(m));
+
+  const totalUnique = new Set([
+    ...theirInterests, ...theirMoods,
+    ...myInterests,    ...myMoods,
+  ]).size;
+  const totalCommon = commonInterests.length + commonMoods.length;
+  const matchScore  = totalUnique > 0
+    ? Math.min(Math.round(30 + (totalCommon / totalUnique) * 69), 99)
+    : 30;
+
+  // is_liked_by_me is false if user_likes table doesn't exist yet
+  const { data: likeRow } = await supabase
+    .from('user_likes')
+    .select('liked_id')
+    .eq('liker_id', requesterId)
+    .eq('liked_id', userId)
+    .maybeSingle();
+
+  res.json({
+    profile: {
+      id:               userId,
+      name:             meta.name      ?? null,
+      username:         profileRow?.username ?? meta.username ?? null,
+      avatar_url:       meta.avatar_url ?? null,
+      cover_url:        meta.cover_url  ?? null,
+      bio:              meta.bio        ?? null,
+      age:              meta.age        ?? null,
+      pronouns:         meta.pronouns   ?? null,
+      location:         meta.location   ?? null,
+      identity:         (meta.identity  as string[]) ?? [],
+      interests:        theirInterests,
+      moods:            theirMoods,
+      photos:           (meta.photos    as string[]) ?? [],
+      common_interests: commonInterests,
+      common_moods:     commonMoods,
+      match_score:      matchScore,
+      is_liked_by_me:   !!likeRow,
+    },
+  });
+});
+
+// POST /users/:userId/like — toggle like a un usuario
+router.post('/:userId/like', async (req: AuthRequest, res) => {
+  const likerId = req.userId!;
+  const likedId = req.params.userId;
+
+  if (likerId === likedId) {
+    res.status(400).json({ error: 'No puedes darte me gusta a ti mismo' });
+    return;
+  }
+
+  const { data: existing } = await supabase
+    .from('user_likes')
+    .select('liked_id')
+    .eq('liker_id', likerId)
+    .eq('liked_id', likedId)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from('user_likes').delete().eq('liker_id', likerId).eq('liked_id', likedId);
+    if (error) { res.status(500).json({ error: error.message }); return; }
+    res.json({ liked: false });
+  } else {
+    const { error } = await supabase
+      .from('user_likes').insert({ liker_id: likerId, liked_id: likedId });
+    if (error) { res.status(500).json({ error: error.message }); return; }
+    res.json({ liked: true });
+  }
+});
+
 export default router;

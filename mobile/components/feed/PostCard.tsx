@@ -7,12 +7,13 @@ import PostActions from './PostActions';
 import type { Post } from '../../features/feed/types';
 
 interface PostCardProps {
-  post:       Post;
-  onLike:     () => void;
-  onComment?: () => void;
-  onShare?:   () => void;
-  isOwn?:     boolean;
-  onDelete?:  () => void;
+  post:           Post;
+  onLike:         () => void;
+  onComment?:     () => void;
+  onShare?:       () => void;
+  isOwn?:         boolean;
+  onDelete?:      () => void;
+  onAuthorPress?: () => void;
 }
 
 function HashtagText({ content }: { content: string }) {
@@ -32,7 +33,7 @@ function HashtagText({ content }: { content: string }) {
   );
 }
 
-export default function PostCard({ post, onLike, onComment, onShare, isOwn, onDelete }: PostCardProps) {
+export default function PostCard({ post, onLike, onComment, onShare, isOwn, onDelete, onAuthorPress }: PostCardProps) {
   const name     = post.author?.name ?? 'Usuario';
   const handle   = post.author?.username
     ? `@${post.author.username}`
@@ -61,7 +62,12 @@ export default function PostCard({ post, onLike, onComment, onShare, isOwn, onDe
           paddingBottom: 8,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+        <TouchableOpacity
+          onPress={onAuthorPress}
+          activeOpacity={onAuthorPress ? 0.7 : 1}
+          disabled={!onAuthorPress}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}
+        >
           {post.author?.avatar_url ? (
             <Image
               source={{ uri: post.author.avatar_url }}
@@ -91,7 +97,7 @@ export default function PostCard({ post, onLike, onComment, onShare, isOwn, onDe
               {handle} · {time}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <View style={{ alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
           {post.mood && (

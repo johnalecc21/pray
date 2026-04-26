@@ -482,6 +482,9 @@ export default function ProfileScreen() {
                   onLike={() => toggleLike(post.id)}
                   onComment={() => setCommentPostId(post.id)}
                   onDelete={post.user_id === profile.id ? () => handleDeletePost(post.id) : undefined}
+                  onAuthorPress={post.user_id !== profile.id && post.author?.id
+                    ? () => router.push(`/user/${post.author!.id}`)
+                    : undefined}
                 />
               ))
             )
