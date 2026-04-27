@@ -2,15 +2,19 @@ import {
   View, Text, ScrollView, Image, TouchableOpacity,
   ActivityIndicator, Alert, Share, StyleSheet, Dimensions,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { usePublicProfile } from '../../features/profile/hooks/usePublicProfile';
+import { useProfile } from '../../features/profile/hooks/useProfile';
+import { useAuth } from '../../context/AuthContext';
+import { MatchSuccessModal } from '../../features/match/components/MatchSuccessModal';
 import { userGradient } from '../../features/feed/utils';
 import { colors, prideGradient } from '../../lib/theme';
 import { interestOptions, moodOptions, identityOptions } from '../../features/onboarding/data';
+import type { MatchCandidate } from '../../features/match/types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const PHOTO_SIZE   = (SCREEN_WIDTH - 40 - 8) / 3;
@@ -70,7 +74,9 @@ export default function UserProfileScreen() {
   const userId = Array.isArray(params.userId) ? params.userId[0] : params.userId;
   const insets = useSafeAreaInsets();
 
-  const { profile, loading, error, liked, toggleLike } = usePublicProfile(userId);
+  const { user }    = useAuth();
+  const { profile: myProfile } = useProfile();
+  const { profile, loading, error, liked, isMatch, toggleLike, dismissMatch } = usePublicProfile(userId);
 
   const interestIconMap  = Object.fromEntries(
     interestOptions.map(i => [i.label, i.icon as React.ComponentProps<typeof Ionicons>['name']])
@@ -106,6 +112,38 @@ export default function UserProfileScreen() {
 
   if (loading) return <LoadingScreen />;
   if (error || !profile) return <ErrorScreen message={error ?? 'No se pudo cargar el perfil'} onBack={() => router.back()} />;
+
+  if (isMatch) {
+    const matchedCandidate: MatchCandidate = {
+      id:               profile.id,
+      name:             profile.name,
+      username:         profile.username,
+      avatar_url:       profile.avatar_url,
+      age:              profile.age,
+      bio:              profile.bio,
+      location:         profile.location,
+      pronouns:         profile.pronouns,
+      identity:         profile.identity,
+      interests:        profile.interests,
+      moods:            profile.moods,
+      photos:           profile.photos,
+      match_score:      profile.match_score,
+      match_factors:    profile.match_factors,
+      distance_km:      profile.distance_km,
+      common_interests: profile.common_interests,
+      common_moods:     profile.common_moods,
+    };
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+        <MatchSuccessModal
+          matched={matchedCandidate}
+          myName={myProfile?.name ?? user?.name ?? null}
+          myAvatarUrl={myProfile?.avatar_url ?? null}
+          onDismiss={dismissMatch}
+        />
+      </SafeAreaView>
+    );
+  }
 
   const name        = profile.name ?? 'Usuario';
   const gradient    = userGradient(profile.id);

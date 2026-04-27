@@ -139,6 +139,34 @@ router.get('/candidates', async (req: AuthRequest, res) => {
   res.json({ candidates });
 });
 
+// ─── POST /match/like/:userId  (swipe-right — upsert only, never toggles) ──────
+
+router.post('/like/:userId', async (req: AuthRequest, res) => {
+  const likerId = req.userId!;
+  const likedId = req.params.userId as string;
+  if (likerId === likedId) { res.status(400).json({ error: 'Invalid' }); return; }
+
+  const { error: insertError } = await supabase
+    .from('user_likes')
+    .upsert({ liker_id: likerId, liked_id: likedId }, { onConflict: 'liker_id,liked_id' });
+
+  if (insertError) {
+    console.error('[match/like] insert error:', insertError);
+    res.status(500).json({ error: insertError.message });
+    return;
+  }
+
+  const { data: reverseRow } = await supabase
+    .from('user_likes')
+    .select('liked_id')
+    .eq('liker_id', likedId)
+    .eq('liked_id', likerId)
+    .maybeSingle();
+
+  console.log(`[match/like] ${likerId} → ${likedId} | matched: ${!!reverseRow}`);
+  res.json({ liked: true, matched: !!reverseRow });
+});
+
 // ─── POST /match/pass/:userId ─────────────────────────────────────────────────
 
 router.post('/pass/:userId', async (req: AuthRequest, res) => {

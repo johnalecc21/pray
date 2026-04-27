@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -55,6 +56,15 @@ export default function MatchScreen() {
   useEffect(() => {
     if (matchedUser) refetchMatches();
   }, [matchedUser, refetchMatches]);
+
+  useEffect(() => {
+    if (tab === 'matches') refetchMatches();
+  }, [tab, refetchMatches]);
+
+  // Refresh matches every time this screen comes into focus (e.g. User A navigates back)
+  useFocusEffect(useCallback(() => {
+    refetchMatches();
+  }, [refetchMatches]));
 
   const visibleStack     = candidates.slice(currentIndex, currentIndex + 3);
   const currentCandidate = candidates[currentIndex];

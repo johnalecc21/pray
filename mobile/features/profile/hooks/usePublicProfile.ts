@@ -3,11 +3,13 @@ import { api } from '../../../lib/api';
 import type { PublicProfile } from '../types';
 
 interface UsePublicProfileResult {
-  profile:     PublicProfile | null;
-  loading:     boolean;
-  error:       string | null;
-  liked:       boolean;
-  toggleLike:  () => Promise<void>;
+  profile:      PublicProfile | null;
+  loading:      boolean;
+  error:        string | null;
+  liked:        boolean;
+  isMatch:      boolean;
+  toggleLike:   () => Promise<void>;
+  dismissMatch: () => void;
 }
 
 export function usePublicProfile(userId: string | undefined): UsePublicProfileResult {
@@ -15,6 +17,7 @@ export function usePublicProfile(userId: string | undefined): UsePublicProfileRe
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
   const [liked,   setLiked]   = useState(false);
+  const [isMatch, setIsMatch] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -47,11 +50,15 @@ export function usePublicProfile(userId: string | undefined): UsePublicProfileRe
     const wasLiked = liked;
     setLiked(!wasLiked);
     try {
-      await api.post<{ liked: boolean }>(`/users/${userId}/like`, {});
+      const result = await api.post<{ liked: boolean; matched: boolean }>(`/users/${userId}/like`, {});
+      setLiked(result.liked);
+      if (result.matched) setIsMatch(true);
     } catch {
       setLiked(wasLiked);
     }
   }, [userId, liked]);
 
-  return { profile, loading, error, liked, toggleLike };
+  const dismissMatch = useCallback(() => setIsMatch(false), []);
+
+  return { profile, loading, error, liked, isMatch, toggleLike, dismissMatch };
 }
