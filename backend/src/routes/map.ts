@@ -137,6 +137,7 @@ router.get('/nearby', async (req: AuthRequest, res) => {
 
   const [
     { data: me },
+    myAuthResult,
     profilesResult,
     listResult,
   ] = await Promise.all([
@@ -144,11 +145,11 @@ router.get('/nearby', async (req: AuthRequest, res) => {
       .select('latitude, longitude, hot_mode')
       .eq('id', userId)
       .maybeSingle(),
+    supabase.auth.admin.getUserById(userId),
+    // No lat/lon filter here — some users have coords only in user_metadata
     supabase.from('profiles')
       .select('id, name, username, avatar_url, latitude, longitude, hot_mode, last_seen_at')
-      .neq('id', userId)
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null),
+      .neq('id', userId),
     supabase.auth.admin.listUsers({ perPage: 500 }),
   ]);
 
@@ -160,26 +161,34 @@ router.get('/nearby', async (req: AuthRequest, res) => {
     allAuthUsers.map(u => [u.id, (u.user_metadata ?? {}) as Record<string, unknown>]),
   );
 
-  const myLat = (me as any)?.latitude  ?? null;
-  const myLon = (me as any)?.longitude ?? null;
-  const now   = Date.now();
+  // Current user's coords: profiles table first, then auth metadata fallback
+  const myMeta  = myAuthResult.data?.user?.user_metadata ?? {};
+  const myLat   = ((me as any)?.latitude  ?? myMeta.latitude  ?? null) as number | null;
+  const myLon   = ((me as any)?.longitude ?? myMeta.longitude ?? null) as number | null;
+  const now     = Date.now();
 
-  let users = ((profiles ?? []) as any[]).map(p => {
+  let users = ((profiles ?? []) as any[]).flatMap(p => {
     const meta = metaMap.get(p.id) ?? {};
 
+    // Coords: profiles table first, auth metadata fallback
+    const lat = (p.latitude  ?? (meta.latitude  as number | undefined) ?? null) as number | null;
+    const lon = (p.longitude ?? (meta.longitude as number | undefined) ?? null) as number | null;
+
+    // Skip users with no location at all
+    if (lat == null || lon == null) return [];
+
     const distance_km = myLat != null && myLon != null
-      ? parseFloat(haversineKm(myLat, myLon, p.latitude, p.longitude).toFixed(3))
+      ? parseFloat(haversineKm(myLat, myLon, lat, lon).toFixed(3))
       : null;
     const bearing_deg = myLat != null && myLon != null
-      ? parseFloat(bearingDeg(myLat, myLon, p.latitude, p.longitude).toFixed(1))
+      ? parseFloat(bearingDeg(myLat, myLon, lat, lon).toFixed(1))
       : null;
     const online  = p.last_seen_at
       ? (now - new Date(p.last_seen_at).getTime()) < FIVE_MIN_MS
       : false;
     const moods: string[] = (meta.moods as string[]) ?? [];
-    const vibe    = moods[0] ?? null;
 
-    return {
+    return [{
       id:         p.id                                      as string,
       name:       (p.name       ?? meta.name       ?? null) as string | null,
       username:   (p.username   ?? meta.username   ?? null) as string | null,
@@ -189,14 +198,14 @@ router.get('/nearby', async (req: AuthRequest, res) => {
       bearing_deg,
       online,
       hot_mode:   Boolean(p.hot_mode),
-      vibe,
+      vibe:       moods[0] ?? null,
       moods,
-    };
+    }];
   });
 
   // Apply filters
-  if (hotOnly)              users = users.filter(u => u.hot_mode);
-  if (filter === 'online')  users = users.filter(u => u.online);
+  if (hotOnly)                 users = users.filter(u => u.hot_mode);
+  if (filter === 'online')     users = users.filter(u => u.online);
   else if (filter === 'cerca') users = users.filter(u => u.distance_km != null && u.distance_km <= 5);
   else if (['fiesta', 'dating', 'amistad', 'networking'].includes(filter)) {
     users = users.filter(u => u.moods.some((m: string) => m.toLowerCase() === filter));
@@ -209,7 +218,7 @@ router.get('/nearby', async (req: AuthRequest, res) => {
     return 0;
   });
 
-  res.json({ users, my_hot_mode: Boolean((me as any)?.hot_mode) });
+  res.json({ users, my_hot_mode: Boolean((me as any)?.hot_mode ?? false) });
 });
 
 export default router;
