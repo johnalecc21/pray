@@ -167,20 +167,18 @@ router.get('/nearby', async (req: AuthRequest, res) => {
   const myLon   = ((me as any)?.longitude ?? myMeta.longitude ?? null) as number | null;
   const now     = Date.now();
 
-  let users = ((profiles ?? []) as any[]).flatMap(p => {
+  let users = ((profiles ?? []) as any[]).map(p => {
     const meta = metaMap.get(p.id) ?? {};
 
     // Coords: profiles table first, auth metadata fallback
     const lat = (p.latitude  ?? (meta.latitude  as number | undefined) ?? null) as number | null;
     const lon = (p.longitude ?? (meta.longitude as number | undefined) ?? null) as number | null;
 
-    // Skip users with no location at all
-    if (lat == null || lon == null) return [];
-
-    const distance_km = myLat != null && myLon != null
+    // Users without coords appear in the grid but not on the radar (distance/bearing = null)
+    const distance_km = myLat != null && myLon != null && lat != null && lon != null
       ? parseFloat(haversineKm(myLat, myLon, lat, lon).toFixed(3))
       : null;
-    const bearing_deg = myLat != null && myLon != null
+    const bearing_deg = myLat != null && myLon != null && lat != null && lon != null
       ? parseFloat(bearingDeg(myLat, myLon, lat, lon).toFixed(1))
       : null;
     const online  = p.last_seen_at
@@ -188,7 +186,7 @@ router.get('/nearby', async (req: AuthRequest, res) => {
       : false;
     const moods: string[] = (meta.moods as string[]) ?? [];
 
-    return [{
+    return {
       id:         p.id                                      as string,
       name:       (p.name       ?? meta.name       ?? null) as string | null,
       username:   (p.username   ?? meta.username   ?? null) as string | null,
@@ -200,7 +198,7 @@ router.get('/nearby', async (req: AuthRequest, res) => {
       hot_mode:   Boolean(p.hot_mode),
       vibe:       moods[0] ?? null,
       moods,
-    }];
+    };
   });
 
   // Apply filters

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { colors } from '../../../lib/theme';
 import { userGradient } from '../../feed/utils';
+import { api } from '../../../lib/api';
 import type { NearbyUser } from '../types';
 
 const SCREEN_H = Dimensions.get('window').height;
@@ -36,6 +37,7 @@ export function UserPreviewSheet({ user, onClose, onLike }: Props) {
       friction: 12,
       useNativeDriver: true,
     }).start();
+    api.post(`/map/view/${user.id}`, {}).catch(() => {});
   }, []);
 
   function close() {

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   View, Text, ScrollView, Image, TouchableOpacity,
   ActivityIndicator, Alert, Share, StyleSheet, Dimensions,
@@ -10,6 +11,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { usePublicProfile } from '../../features/profile/hooks/usePublicProfile';
 import { useProfile } from '../../features/profile/hooks/useProfile';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../lib/api';
 import { MatchSuccessModal } from '../../features/match/components/MatchSuccessModal';
 import { userGradient } from '../../features/feed/utils';
 import { colors, prideGradient } from '../../lib/theme';
@@ -77,6 +79,10 @@ export default function UserProfileScreen() {
   const { user }    = useAuth();
   const { profile: myProfile } = useProfile();
   const { profile, loading, error, liked, isMatch, toggleLike, dismissMatch } = usePublicProfile(userId);
+
+  useEffect(() => {
+    if (userId) api.post(`/map/view/${userId}`, {}).catch(() => {});
+  }, [userId]);
 
   const interestIconMap  = Object.fromEntries(
     interestOptions.map(i => [i.label, i.icon as React.ComponentProps<typeof Ionicons>['name']])
