@@ -5,6 +5,7 @@ import authRoutes  from './routes/auth';
 import userRoutes  from './routes/users';
 import postRoutes  from './routes/posts';
 import matchRoutes from './routes/match';
+import mapRoutes   from './routes/map';
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use('/auth',  authRoutes);
 app.use('/users', userRoutes);
 app.use('/posts', postRoutes);
 app.use('/match', matchRoutes);
+app.use('/map',   mapRoutes);
 
 const PORT = process.env.PORT ?? 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

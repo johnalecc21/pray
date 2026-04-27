@@ -70,6 +70,7 @@ export function useMatchCandidates(): UseMatchCandidatesResult {
     if (!user?.id) return;
 
     const channelName = `incoming-likes-${user.id}`;
+    console.log('[realtime] subscribing | my id:', user.id);
 
     // Remove any stale channel with this name (React Strict Mode runs effects twice)
     supabase.getChannels().forEach(ch => {
@@ -87,8 +88,8 @@ export function useMatchCandidates(): UseMatchCandidatesResult {
           filter: `liked_id=eq.${user.id}`,
         },
         async (payload) => {
+          console.log('[realtime] INSERT received:', JSON.stringify(payload.new));
           const likerId = (payload.new as any).liker_id as string;
-          console.log('[realtime] someone liked me:', likerId);
           if (shownMatchIds.current.has(likerId)) return;
           try {
             const { profile } = await api.get<{ profile: PublicProfile }>(`/users/${likerId}`);
@@ -102,8 +103,8 @@ export function useMatchCandidates(): UseMatchCandidatesResult {
           }
         },
       )
-      .subscribe((status) => {
-        console.log('[realtime] channel status:', status);
+      .subscribe((status, err) => {
+        console.log('[realtime] channel status:', status, err ?? '');
       });
 
     return () => { supabase.removeChannel(channel); };
