@@ -4,6 +4,8 @@ export interface NearbyUser {
   username:    string | null;
   avatar_url:  string | null;
   age:         number | null;
+  latitude:    number | null;
+  longitude:   number | null;
   distance_km: number | null;
   bearing_deg: number | null;
   online:      boolean;

@@ -1,44 +1,64 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
+import * as Location from 'expo-location';
 
+import { useAuth }        from '../../context/AuthContext';
 import { useNearbyUsers } from '../../features/map/hooks/useNearbyUsers';
 import { useMapStats }    from '../../features/map/hooks/useMapStats';
 import { useHotMode }     from '../../features/map/hooks/useHotMode';
 import { usePresence }    from '../../features/map/hooks/usePresence';
 
-import { MapFilters }       from '../../features/map/components/MapFilters';
-import { MapStats }         from '../../features/map/components/MapStats';
-import { HotModeToggle }    from '../../features/map/components/HotModeToggle';
-import { RadarMap }         from '../../features/map/components/RadarMap';
-import { NearbyUserCard }   from '../../features/map/components/NearbyUserCard';
-import { UserPreviewSheet } from '../../features/map/components/UserPreviewSheet';
+import { MapFilters }        from '../../features/map/components/MapFilters';
+import { MapStats }          from '../../features/map/components/MapStats';
+import { HotModeToggle }     from '../../features/map/components/HotModeToggle';
+import { MapViewComponent }  from '../../features/map/components/MapViewComponent';
+import { NearbyUserCard }    from '../../features/map/components/NearbyUserCard';
+import { UserPreviewSheet }  from '../../features/map/components/UserPreviewSheet';
 
 import GradientText from '../../components/ui/GradientText';
 import { colors }   from '../../lib/theme';
 import type { MapFilter, NearbyUser } from '../../features/map/types';
-import { Dimensions } from 'react-native';
 
-const SCREEN_W   = Dimensions.get('window').width;
-const CARD_GAP   = 8;
-const CARD_COLS  = 3;
-const CARD_SIZE  = (SCREEN_W - 40 - CARD_GAP * (CARD_COLS - 1)) / CARD_COLS;
+const SCREEN_W  = Dimensions.get('window').width;
+const CARD_GAP  = 8;
+const CARD_COLS = 3;
+const CARD_SIZE = (SCREEN_W - 40 - CARD_GAP * (CARD_COLS - 1)) / CARD_COLS;
 
 export default function MapScreen() {
   const [filter,       setFilter]       = useState<MapFilter>('Todos');
   const [hotModeOnly,  setHotModeOnly]  = useState(false);
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
+  const { user } = useAuth();
   usePresence();
 
-  const { users, myHotMode, loading, refetch }    = useNearbyUsers(filter, hotModeOnly);
-  const { stats, refetch: refetchStats }           = useMapStats();
+  const { users, myHotMode, loading, refetch }          = useNearbyUsers(filter, hotModeOnly);
+  const { stats, refetch: refetchStats }                 = useMapStats();
   const { active: hotMode, toggle: toggleHotMode, pending } = useHotMode(myHotMode);
+
+  // Get device location once on mount
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+    })();
+  }, []);
+
+  // Refetch when a different account logs in (fixes blank map after account switch)
+  useEffect(() => {
+    if (user?.id) {
+      refetch();
+      refetchStats();
+    }
+  }, [user?.id]);
 
   useFocusEffect(useCallback(() => {
     refetch();
@@ -47,12 +67,10 @@ export default function MapScreen() {
 
   function handleToggleHotMode() {
     toggleHotMode();
-    // If activating hot mode, switch filter to hot-only view
     if (!hotMode) setHotModeOnly(true);
     else          setHotModeOnly(false);
   }
 
-  // Split users into rows of 3 for the grid
   const rows: NearbyUser[][] = [];
   for (let i = 0; i < users.length; i += CARD_COLS) {
     rows.push(users.slice(i, i + CARD_COLS));
@@ -61,23 +79,18 @@ export default function MapScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
 
-      {/* ── FIXED HEADER ─────────────────────────────────────────── */}
+      {/* ── HEADER ───────────────────────────────────────────────── */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <GradientText fontSize={20} fontWeight="800">Mapa</GradientText>
           <HotModeToggle active={hotMode} pending={pending} onToggle={handleToggleHotMode} />
         </View>
 
-        {/* Hot mode status badge */}
         <View style={[
           styles.modeBadge,
           hotMode && { backgroundColor: `${colors.pride.orange}14`, borderColor: `${colors.pride.orange}35` },
         ]}>
-          <Ionicons
-            name="flame"
-            size={13}
-            color={hotMode ? colors.pride.orange : colors.mutedForeground}
-          />
+          <Ionicons name="flame" size={13} color={hotMode ? colors.pride.orange : colors.mutedForeground} />
           <Text style={[styles.modeBadgeText, hotMode && { color: colors.pride.orange }]}>
             {hotMode
               ? 'Visible para personas en Modo Hot cerca de ti'
@@ -85,46 +98,40 @@ export default function MapScreen() {
           </Text>
         </View>
 
-        {/* Filters */}
         <MapFilters active={filter} onChange={setFilter} />
       </View>
 
-      {/* ── SCROLLABLE CONTENT ───────────────────────────────────── */}
+      {/* ── REAL MAP ─────────────────────────────────────────────── */}
+      {loading && !users.length ? (
+        <View style={styles.mapPlaceholder}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : (
+        <MapViewComponent
+          users={users}
+          userLocation={userLocation}
+          hotModeActive={hotMode}
+          onSelectUser={setSelectedUser}
+        />
+      )}
+
+      {/* ── SCROLLABLE LIST ──────────────────────────────────────── */}
       <ScrollView
+        style={styles.listScroll}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={styles.listContent}
       >
         {/* Stats */}
         <MapStats stats={stats} />
 
-        {/* Radar */}
-        <View style={styles.radarSection}>
-          <View style={styles.radarHeader}>
-            <Text style={styles.sectionTitle}>Radar</Text>
-            <Text style={styles.radarCaption}>
-              {users.length > 0
-                ? `${users.length} persona${users.length > 1 ? 's' : ''} cerca`
-                : 'Nadie cerca aún'}
-            </Text>
-          </View>
-
-          {loading ? (
-            <View style={styles.radarPlaceholder}>
-              <ActivityIndicator color={colors.primary} />
-            </View>
-          ) : (
-            <RadarMap
-              users={users}
-              hotModeActive={hotMode}
-              onSelectUser={setSelectedUser}
-            />
-          )}
-        </View>
-
         {/* Nearby grid */}
         <View style={styles.gridSection}>
           <View style={styles.gridHeader}>
-            <Text style={styles.sectionTitle}>Cerca de ti</Text>
+            <Text style={styles.sectionTitle}>
+              {users.length > 0
+                ? `${users.length} persona${users.length !== 1 ? 's' : ''} cerca`
+                : 'Cerca de ti'}
+            </Text>
             {!loading && (
               <TouchableOpacity onPress={refetch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Ionicons name="refresh-outline" size={16} color={colors.mutedForeground} />
@@ -150,12 +157,12 @@ export default function MapScreen() {
             <View style={styles.grid}>
               {rows.map((row, ri) => (
                 <View key={ri} style={styles.gridRow}>
-                  {row.map(user => (
+                  {row.map(u => (
                     <NearbyUserCard
-                      key={user.id}
-                      user={user}
+                      key={u.id}
+                      user={u}
                       size={CARD_SIZE}
-                      onPress={() => setSelectedUser(user)}
+                      onPress={() => setSelectedUser(u)}
                     />
                   ))}
                 </View>
@@ -192,11 +199,9 @@ const styles = StyleSheet.create({
   headerTop:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
   modeBadge:      { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 20, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 14, backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border },
   modeBadgeText:  { flex: 1, fontSize: 12, color: colors.mutedForeground, lineHeight: 17 },
-  scroll:         { paddingTop: 12, paddingBottom: 40 },
-  radarSection:   { marginBottom: 24 },
-  radarHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 14 },
-  radarCaption:   { fontSize: 13, color: colors.mutedForeground },
-  radarPlaceholder:{ height: 280, alignItems: 'center', justifyContent: 'center' },
+  mapPlaceholder: { width: SCREEN_W, height: 300, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f0f17' },
+  listScroll:     { flex: 1 },
+  listContent:    { paddingTop: 12, paddingBottom: 40 },
   gridSection:    { paddingHorizontal: 20, marginBottom: 16 },
   gridHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   grid:           { gap: CARD_GAP },

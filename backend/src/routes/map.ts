@@ -33,10 +33,15 @@ const FIVE_MIN_MS = 5 * 60_000;
 
 router.patch('/presence', async (req: AuthRequest, res) => {
   const userId = req.userId!;
-  const { error } = await supabase
-    .from('profiles')
-    .update({ last_seen_at: new Date().toISOString() })
-    .eq('id', userId);
+  const { latitude, longitude } = req.body as { latitude?: number; longitude?: number };
+
+  const update: Record<string, unknown> = { last_seen_at: new Date().toISOString() };
+  if (typeof latitude === 'number' && typeof longitude === 'number') {
+    update.latitude  = latitude;
+    update.longitude = longitude;
+  }
+
+  const { error } = await supabase.from('profiles').update(update).eq('id', userId);
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ ok: true });
 });
@@ -192,6 +197,8 @@ router.get('/nearby', async (req: AuthRequest, res) => {
       username:   (p.username   ?? meta.username   ?? null) as string | null,
       avatar_url: (p.avatar_url ?? meta.avatar_url ?? null) as string | null,
       age:        (meta.age     ?? null)                    as number | null,
+      latitude,
+      longitude,
       distance_km,
       bearing_deg,
       online,

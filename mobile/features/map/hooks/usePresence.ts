@@ -1,11 +1,23 @@
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
+import * as Location from 'expo-location';
 import { api } from '../../../lib/api';
 
 export function usePresence() {
   useEffect(() => {
     async function ping() {
-      try { await api.patch<{ ok: boolean }>('/map/presence', {}); } catch { /* silent */ }
+      try {
+        const body: Record<string, unknown> = {};
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          body.latitude  = loc.coords.latitude;
+          body.longitude = loc.coords.longitude;
+        }
+        await api.patch<{ ok: boolean }>('/map/presence', body);
+      } catch { /* silent */ }
     }
 
     ping();
