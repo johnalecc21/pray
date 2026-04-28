@@ -1,4 +1,5 @@
-import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { Component } from 'react';
+import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity, NativeModules } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../lib/theme';
@@ -6,15 +7,19 @@ import { userGradient } from '../../feed/utils';
 import type { NearbyUser } from '../types';
 
 // ── Guarded require ──────────────────────────────────────────────────────────
-// Static import throws "MLRNCameraModule could not be found" in Expo Go.
-// require() inside try/catch avoids the crash; ML stays null → shows fallback.
+// Only require maplibre when its native module is actually compiled into the
+// APK. Skipping the require entirely prevents the maybeHijackSafeAreaProvider
+// crash that happens during JS module initialization when the native side is
+// absent (e.g. before running `npx expo run:android` after npm install).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let ML: any = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const mod = require('@maplibre/maplibre-react-native');
-  ML = mod?.default ?? mod;
-} catch { /* native module not available in Expo Go */ }
+if (NativeModules.MLRNModule != null) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require('@maplibre/maplibre-react-native');
+    ML = mod?.default ?? mod;
+  } catch { /* should not happen if MLRNModule is present, but guard anyway */ }
+}
 
 // CARTO Dark Matter — free, no API key needed
 const DARK_STYLE  = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
@@ -80,10 +85,21 @@ function MapUnavailable() {
   );
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
-export function MapViewComponent({ users, userLocation, hotModeActive, onSelectUser }: Props) {
-  if (!ML) return <MapUnavailable />;
+// ── Error boundary — catches MapLibre native-module crashes at render time ────
+class MapBoundary extends Component<
+  { children: React.ReactNode },
+  { crashed: boolean }
+> {
+  state = { crashed: false };
+  static getDerivedStateFromError() { return { crashed: true }; }
+  render() {
+    if (this.state.crashed) return <MapUnavailable />;
+    return this.props.children;
+  }
+}
 
+// ── Inner map — rendered only when ML loaded, wrapped by boundary ─────────────
+function MLMap({ users, userLocation, hotModeActive, onSelectUser }: Props) {
   const mapUsers = users.filter(u => u.latitude != null && u.longitude != null);
   const center: [number, number] = userLocation
     ? [userLocation.longitude, userLocation.latitude]
@@ -132,6 +148,16 @@ export function MapViewComponent({ users, userLocation, hotModeActive, onSelectU
         </View>
       )}
     </View>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
+export function MapViewComponent(props: Props) {
+  if (!ML) return <MapUnavailable />;
+  return (
+    <MapBoundary>
+      <MLMap {...props} />
+    </MapBoundary>
   );
 }
 
